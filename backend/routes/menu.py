@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from ..database import get_db
@@ -111,7 +111,7 @@ def eliminar_producto(prod_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/activar-dia")
-def activar_menu_dia(items: list, db: Session = Depends(get_db)):
+def activar_menu_dia(items: List[dict] = Body(...), db: Session = Depends(get_db)):
     """
     Activa los platos elegidos para el día de hoy.
     Desactiva todos los demás productos en la BD.
