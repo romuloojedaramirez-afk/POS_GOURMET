@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GourmetPOS - Reportes</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-logo"><h1>🍽️ GourmetPOS</h1><p>ERP Restaurante v2.0</p></div>
+  <ul class="sidebar-nav">
+    <li><a href="index.html"><span class="icon">📊</span> Dashboard</a></li>
+    <li><a href="pos.html"><span class="icon">🛒</span> POS / Mesas</a></li>
+    <li><a href="cocina.html"><span class="icon">👨‍🍳</span> Cocina</a></li>
+    <li><a href="clientes.html"><span class="icon">👥</span> Clientes</a></li>
+    <li><a href="reportes.html" class="active"><span class="icon">📈</span> Reportes</a></li>
+    <li><a href="whatsapp.html"><span class="icon">💬</span> WhatsApp</a></li>
+    <li><a href="admin.html"><span class="icon">⚙️</span> Configuración</a></li>
+  </ul>
+</nav>
+
+<div class="main-wrapper">
+  <header class="header">
+    <div class="header-title">📈 Reportes & Analítica</div>
+    <div class="header-right">
+      <input type="date" id="filtro-desde" style="width:auto;padding:6px 10px;font-size:13px">
+      <input type="date" id="filtro-hasta" style="width:auto;padding:6px 10px;font-size:13px">
+      <button class="btn btn-ghost btn-sm" onclick="cargarReportes()">🔍 Filtrar</button>
+      <a class="btn btn-success btn-sm" href="/api/reportes/exportar-excel" target="_blank">📊 Excel</a>
+    </div>
+  </header>
+
+  <div class="content">
+
+    <!-- KPIs -->
+    <div class="kpi-grid" style="margin-bottom:24px" id="rep-kpis">
+      <div class="kpi-card orange"><div class="kpi-icon">💰</div><div class="kpi-value" id="rep-total">—</div><div class="kpi-label">Total Ventas</div></div>
+      <div class="kpi-card green"><div class="kpi-icon">🧾</div><div class="kpi-value" id="rep-pedidos">—</div><div class="kpi-label">Pedidos</div></div>
+      <div class="kpi-card yellow"><div class="kpi-icon">🎯</div><div class="kpi-value" id="rep-ticket">—</div><div class="kpi-label">Ticket Promedio</div></div>
+      <div class="kpi-card purple"><div class="kpi-icon">📦</div><div class="kpi-value" id="rep-items">—</div><div class="kpi-label">Items Vendidos</div></div>
+    </div>
+
+    <div class="grid-2" style="margin-bottom:24px">
+      <div class="card">
+        <div class="card-title">🏆 Top 10 Platos</div>
+        <canvas id="chart-top10" height="280"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-title">💳 Métodos de Pago</div>
+        <canvas id="chart-metodos" height="280"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div class="card-title" style="margin:0">📋 Historial de Ventas</div>
+        <div style="font-size:13px;color:var(--text-muted)" id="rep-subtotal-display"></div>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Ticket</th>
+              <th>Fecha</th>
+              <th>Mesa / Canal</th>
+              <th>Items</th>
+              <th>Subtotal</th>
+              <th>IGV</th>
+              <th>Total</th>
+              <th>Pago</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-ventas"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="assets/js/api.js"></script>
+<script>
+let chartTop10, chartMetodos;
+
+function initCharts() {
+  const gc = '#2E3250';
+  const opts = { plugins: { legend: { labels: { color: '#8B8FA8' } } } };
+
+  chartTop10 = new Chart(document.getElementById('chart-top10'), {
+    type: 'bar',
+    data: { labels: [], datasets: [{ label: 'Unidades vendidas', data: [], backgroundColor: '#FF6B35' }] },
+    options: { ...opts, indexAxis: 'y', scales: {
+      x: { ticks: { color: '#8B8FA8' }, grid: { color: gc } },
+      y: { ticks: { color: '#8B8FA8' }, grid: { color: gc } }
+    }}
+  });
+
+  chartMetodos = new Chart(document.getElementById('chart-metodos'), {
+    type: 'pie',
+    data: { labels: [], datasets: [{ data: [], backgroundColor: ['#FF6B35','#00D4A1','#FFB800','#7C6FFF','#FF4D6A'] }] },
+    options: opts
+  });
+}
+
+async function cargarReportes() {
+  const desde = document.getElementById('filtro-desde').value;
+  const hasta = document.getElementById('filtro-hasta').value;
+
+  const params = new URLSearchParams();
+  if (desde) params.set('desde', desde + 'T00:00:00');
+  if (hasta) params.set('hasta', hasta + 'T23:59:59');
+  const qs = params.toString() ? '?' + params.toString() : '';
+
+  try {
+    const [ventas, top10, metodos] = await Promise.all([
+      API.get('/reportes/ventas' + qs),
+      API.get('/reportes/productos-top?limite=10' + (desde ? '&desde=' + desde + 'T00:00:00' : '')),
+      API.get('/reportes/metodos-pago' + (desde ? '?desde=' + desde + 'T00:00:00' : '')),
+    ]);
+
+    // KPIs
+    const totalVentas = ventas.reduce((s, p) => s + p.total, 0);
+    const ticketProm = ventas.length ? totalVentas / ventas.length : 0;
+    const totalItems = ventas.reduce((s, p) => s + p.items, 0);
+    document.getElementById('rep-total').textContent = fmt(totalVentas);
+    document.getElementById('rep-pedidos').textContent = ventas.length;
+    document.getElementById('rep-ticket').textContent = fmt(ticketProm);
+    document.getElementById('rep-items').textContent = totalItems;
+    document.getElementById('rep-subtotal-display').textContent = `${ventas.length} registros · Total: ${fmt(totalVentas)}`;
+
+    // Chart top10
+    chartTop10.data.labels = top10.map(p => p.emoji + ' ' + p.nombre.substring(0, 22));
+    chartTop10.data.datasets[0].data = top10.map(p => p.total_vendido);
+    chartTop10.update();
+
+    // Chart metodos
+    chartMetodos.data.labels = metodos.map(m => m.metodo.toUpperCase());
+    chartMetodos.data.datasets[0].data = metodos.map(m => m.total);
+    chartMetodos.update();
+
+    // Tabla
+    const tbody = document.getElementById('tabla-ventas');
+    tbody.innerHTML = ventas.map(p => `
+      <tr>
+        <td><code>${p.ticket || '—'}</code></td>
+        <td>${fmtFecha(p.fecha)}</td>
+        <td>${p.mesa ? 'Mesa ' + p.mesa : (p.canal === 'whatsapp' ? '📱 WA' : p.canal)}</td>
+        <td>${p.items}</td>
+        <td>${fmt(p.subtotal)}</td>
+        <td>${fmt(p.igv)}</td>
+        <td><strong>${fmt(p.total)}</strong></td>
+        <td><span class="badge badge-listo">${(p.metodo_pago || '—').toUpperCase()}</span></td>
+      </tr>
+    `).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--text-muted)">Sin registros</td></tr>';
+
+  } catch (e) {
+    toast('Error: ' + e.message, 'error');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Default: mes actual
+  const now = new Date();
+  const inicio = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+  document.getElementById('filtro-desde').value = inicio;
+  document.getElementById('filtro-hasta').value = now.toISOString().split('T')[0];
+  initCharts();
+  cargarReportes();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GourmetPOS - Configuración</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+<nav class="sidebar">
+  <div class="sidebar-logo"><h1>🍽️ GourmetPOS</h1><p>ERP Restaurante v2.0</p></div>
+  <ul class="sidebar-nav">
+    <li><a href="index.html"><span class="icon">📊</span> Dashboard</a></li>
+    <li><a href="pos.html"><span class="icon">🛒</span> POS / Mesas</a></li>
+    <li><a href="cocina.html"><span class="icon">👨‍🍳</span> Cocina</a></li>
+    <li><a href="clientes.html"><span class="icon">👥</span> Clientes</a></li>
+    <li><a href="reportes.html"><span class="icon">📈</span> Reportes</a></li>
+    <li><a href="whatsapp.html"><span class="icon">💬</span> WhatsApp</a></li>
+    <li><a href="admin.html" class="active"><span class="icon">⚙️</span> Configuración</a></li>
+  </ul>
+</nav>
+<div class="main-wrapper">
+  <header class="header">
+    <div class="header-title">⚙️ Configuración del Sistema</div>
+    <div class="header-right">
+      <button class="btn btn-primary btn-sm" onclick="guardarConfig()">💾 Guardar Todo</button>
+    </div>
+  </header>
+  <div class="content">
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('tab-rest', this)">🏠 Restaurante</button>
+      <button class="tab-btn" onclick="switchTab('tab-pagos', this)">💳 Pagos Digitales</button>
+      <button class="tab-btn" onclick="switchTab('tab-menu', this)">🍽️ Carta / Menú</button>
+      <button class="tab-btn" onclick="switchTab('tab-mesas', this)">🪑 Mesas</button>
+      <button class="tab-btn" onclick="switchTab('tab-wa', this)">💬 WhatsApp API</button>
+    </div>
+
+    <!-- RESTAURANTE -->
+    <div class="tab-content active" id="tab-rest">
+      <div class="card">
+        <div class="card-title">Datos del Restaurante</div>
+        <div class="grid-2">
+          <div class="form-group"><label>Nombre del Restaurante</label><input type="text" id="cfg-nombre" placeholder="El Buen Sabor"></div>
+          <div class="form-group"><label>RUC / NIT</label><input type="text" id="cfg-ruc" placeholder="20512345678"></div>
+          <div class="form-group"><label>Dirección</label><input type="text" id="cfg-direccion"></div>
+          <div class="form-group"><label>Teléfono</label><input type="text" id="cfg-telefono"></div>
+          <div class="form-group"><label>Moneda (símbolo)</label><input type="text" id="cfg-moneda" placeholder="S/"></div>
+          <div class="form-group"><label>IGV (decimal, ej: 0.18)</label><input type="number" id="cfg-igv" step="0.01" placeholder="0.18"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGOS -->
+    <div class="tab-content" id="tab-pagos">
+      <div class="card">
+        <div class="card-title">Cuentas de Pago Digital</div>
+        <div class="grid-2">
+          <div class="form-group"><label>💜 Número Yape</label><input type="text" id="cfg-yape" placeholder="944 123 456"></div>
+          <div class="form-group"><label>🔵 Número Plin</label><input type="text" id="cfg-plin" placeholder="944 123 456"></div>
+          <div class="form-group"><label>🟢 Número Nequi</label><input type="text" id="cfg-nequi" placeholder="311 123 4567"></div>
+          <div class="form-group"><label>🟠 Número Daviplata</label><input type="text" id="cfg-daviplata" placeholder="311 123 4567"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MENÚ -->
+    <div class="tab-content" id="tab-menu">
+      <div class="grid-2">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <div class="card-title" style="margin:0">Categorías</div>
+            <button class="btn btn-primary btn-sm" onclick="showModal('modal-nueva-cat')">+ Categoría</button>
+          </div>
+          <div id="lista-cats"></div>
+        </div>
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <div class="card-title" style="margin:0">Productos</div>
+            <button class="btn btn-primary btn-sm" onclick="showModal('modal-nuevo-prod')">+ Producto</button>
+          </div>
+          <div id="filtro-cat-select" style="margin-bottom:10px">
+            <select id="filtro-cat" onchange="cargarProductos()" style="font-size:13px"><option value="">Todas las categorías</option></select>
+          </div>
+          <div id="lista-prods"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MESAS -->
+    <div class="tab-content" id="tab-mesas">
+      <div class="card" style="max-width:400px">
+        <div class="card-title">Configurar Mesas</div>
+        <div class="form-group">
+          <label>Cantidad de Mesas (1-100)</label>
+          <input type="number" id="cfg-mesas-cant" min="1" max="100" placeholder="16">
+        </div>
+        <button class="btn btn-primary" onclick="configurarMesas()">✅ Aplicar</button>
+      </div>
+    </div>
+
+    <!-- WHATSAPP API -->
+    <div class="tab-content" id="tab-wa">
+      <div class="card">
+        <div class="card-title">WhatsApp Cloud API (Meta)</div>
+        <div class="form-group"><label>Token de Acceso (Bearer)</label><input type="password" id="cfg-wa-token" placeholder="EAAxxxxxx..."></div>
+        <div class="form-group"><label>Phone Number ID</label><input type="text" id="cfg-wa-phone-id" placeholder="123456789012345"></div>
+        <div class="form-group"><label>Número WhatsApp del Bot</label><input type="text" id="cfg-whatsapp" placeholder="51944123456"></div>
+        <div class="form-group"><label>Google Gemini API Key</label><input type="password" id="cfg-gemini" placeholder="AIza..."></div>
+        <div class="form-group"><label>Mensaje de Bienvenida</label><textarea id="cfg-bienvenida" rows="3"></textarea></div>
+        <div style="background:var(--surface2);border-radius:10px;padding:14px;font-size:13px;color:var(--text-muted)">
+          <strong>Webhook URL:</strong> <code style="color:var(--accent)">/api/whatsapp/webhook</code><br>
+          <strong>Verify Token:</strong> <code style="color:var(--accent)">gormetpos2024</code>
+        </div>
+        <button class="btn btn-primary" style="margin-top:12px" onclick="guardarConfig()">💾 Guardar Configuración API</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODALES -->
+<div class="modal-overlay" id="modal-nueva-cat">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header"><div class="modal-title">Nueva Categoría</div><button class="modal-close" onclick="hideModal('modal-nueva-cat')">×</button></div>
+    <div class="form-group"><label>Nombre</label><input type="text" id="ncat-nombre" placeholder="Platos de Fondo"></div>
+    <div class="form-group"><label>Emoji</label><input type="text" id="ncat-emoji" placeholder="🍽️" maxlength="4"></div>
+    <div class="form-group"><label>Color</label><input type="color" id="ncat-color" value="#FF6B35"></div>
+    <button class="btn btn-primary btn-full" onclick="crearCategoria()">✅ Crear</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-nuevo-prod">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">Nuevo Producto</div><button class="modal-close" onclick="hideModal('modal-nuevo-prod')">×</button></div>
+    <div class="form-group"><label>Categoría</label><select id="nprod-cat"></select></div>
+    <div class="form-group"><label>Nombre</label><input type="text" id="nprod-nombre" placeholder="Lomo Saltado"></div>
+    <div class="form-group"><label>Descripción</label><textarea id="nprod-desc" rows="2"></textarea></div>
+    <div class="grid-2">
+      <div class="form-group"><label>Precio</label><input type="number" id="nprod-precio" step="0.50" placeholder="0.00"></div>
+      <div class="form-group"><label>Emoji</label><input type="text" id="nprod-emoji" placeholder="🥩" maxlength="4"></div>
+    </div>
+    <div class="form-group"><label>Tiempo Prep. (min)</label><input type="number" id="nprod-tiempo" value="15"></div>
+    <div class="form-group" style="display:flex;gap:16px;align-items:center">
+      <label style="display:flex;align-items:center;gap:6px;text-transform:none;font-size:13px"><input type="checkbox" id="nprod-destacado"> ⭐ Destacado</label>
+      <label style="display:flex;align-items:center;gap:6px;text-transform:none;font-size:13px"><input type="checkbox" id="nprod-disponible" checked> ✅ Disponible</label>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="crearProducto()">✅ Crear</button>
+  </div>
+</div>
+
+<script src="assets/js/api.js"></script>
+<script>
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  if (id === 'tab-menu') { cargarCategorias(); cargarProductos(); }
+}
+
+async function cargarConfig() {
+  try {
+    const cfg = await API.get('/config/');
+    const map = {};
+    cfg.forEach(c => map[c.clave] = c.valor);
+    const campos = {
+      'cfg-nombre': 'nombre', 'cfg-ruc': 'ruc', 'cfg-direccion': 'direccion',
+      'cfg-telefono': 'telefono', 'cfg-moneda': 'moneda', 'cfg-igv': 'igv',
+      'cfg-yape': 'yape', 'cfg-plin': 'plin', 'cfg-nequi': 'nequi', 'cfg-daviplata': 'daviplata',
+      'cfg-whatsapp': 'whatsapp', 'cfg-wa-token': 'whatsapp_token',
+      'cfg-wa-phone-id': 'whatsapp_phone_id', 'cfg-gemini': 'gemini_api_key',
+      'cfg-bienvenida': 'mensaje_bienvenida',
+    };
+    for (const [elemId, clave] of Object.entries(campos)) {
+      const el = document.getElementById(elemId);
+      if (el && map[clave] !== undefined) el.value = map[clave];
+    }
+  } catch (e) {
+    toast('Error cargando config: ' + e.message, 'error');
+  }
+}
+
+async function guardarConfig() {
+  const datos = {
+    nombre: document.getElementById('cfg-nombre').value,
+    ruc: document.getElementById('cfg-ruc').value,
+    direccion: document.getElementById('cfg-direccion').value,
+    telefono: document.getElementById('cfg-telefono').value,
+    moneda: document.getElementById('cfg-moneda').value,
+    igv: document.getElementById('cfg-igv').value,
+    yape: document.getElementById('cfg-yape').value,
+    plin: document.getElementById('cfg-plin').value,
+    nequi: document.getElementById('cfg-nequi').value || '',
+    daviplata: document.getElementById('cfg-daviplata').value || '',
+    whatsapp: document.getElementById('cfg-whatsapp').value,
+    whatsapp_token: document.getElementById('cfg-wa-token').value,
+    whatsapp_phone_id: document.getElementById('cfg-wa-phone-id').value,
+    gemini_api_key: document.getElementById('cfg-gemini').value,
+    mensaje_bienvenida: document.getElementById('cfg-bienvenida').value,
+  };
+  try {
+    await API.post('/config/bulk', datos);
+    toast('✅ Configuración guardada', 'success');
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+async function cargarCategorias() {
+  const cats = await API.get('/menu/categorias');
+  document.getElementById('lista-cats').innerHTML = cats.map(c => `
+    <div style="display:flex;align-items:center;gap:10px;padding:8px;border-bottom:1px solid var(--border)">
+      <span style="font-size:20px">${c.emoji}</span>
+      <div style="flex:1"><div style="font-weight:600;font-size:13px">${c.nombre}</div></div>
+      <button class="btn btn-danger btn-sm" onclick="eliminarCat(${c.id})">🗑️</button>
+    </div>
+  `).join('') || '<p style="color:var(--text-muted);font-size:13px">Sin categorías</p>';
+
+  const sel = document.getElementById('nprod-cat');
+  const filtro = document.getElementById('filtro-cat');
+  sel.innerHTML = cats.map(c => `<option value="${c.id}">${c.emoji} ${c.nombre}</option>`).join('');
+  filtro.innerHTML = '<option value="">Todas las categorías</option>' + cats.map(c => `<option value="${c.id}">${c.emoji} ${c.nombre}</option>`).join('');
+}
+
+async function cargarProductos() {
+  const catId = document.getElementById('filtro-cat')?.value;
+  const url = '/menu/productos' + (catId ? `?categoria_id=${catId}` : '');
+  const prods = await API.get(url);
+  document.getElementById('lista-prods').innerHTML = prods.map(p => `
+    <div style="display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid var(--border)">
+      <span style="font-size:18px">${p.emoji}</span>
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:13px">${p.nombre}</div>
+        <div style="font-size:12px;color:var(--accent)">S/ ${p.precio.toFixed(2)}</div>
+      </div>
+      <button class="btn ${p.disponible ? 'btn-ghost' : 'btn-danger'} btn-sm"
+        onclick="toggleDisp(${p.id}, ${p.disponible})">
+        ${p.disponible ? '✅' : '❌'}
+      </button>
+      <button class="btn btn-danger btn-sm" onclick="eliminarProd(${p.id})">🗑️</button>
+    </div>
+  `).join('') || '<p style="color:var(--text-muted);font-size:13px">Sin productos</p>';
+}
+
+async function crearCategoria() {
+  try {
+    await API.post('/menu/categorias', {
+      nombre: document.getElementById('ncat-nombre').value,
+      emoji: document.getElementById('ncat-emoji').value || '🍽️',
+      color: document.getElementById('ncat-color').value,
+    });
+    toast('✅ Categoría creada', 'success');
+    hideModal('modal-nueva-cat');
+    cargarCategorias();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function crearProducto() {
+  try {
+    await API.post('/menu/productos', {
+      categoria_id: parseInt(document.getElementById('nprod-cat').value),
+      nombre: document.getElementById('nprod-nombre').value,
+      descripcion: document.getElementById('nprod-desc').value,
+      precio: parseFloat(document.getElementById('nprod-precio').value),
+      emoji: document.getElementById('nprod-emoji').value || '🍽️',
+      tiempo_prep: parseInt(document.getElementById('nprod-tiempo').value) || 15,
+      destacado: document.getElementById('nprod-destacado').checked,
+      disponible: document.getElementById('nprod-disponible').checked,
+    });
+    toast('✅ Producto creado', 'success');
+    hideModal('modal-nuevo-prod');
+    cargarProductos();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function eliminarCat(id) {
+  if (!confirm('¿Eliminar esta categoría?')) return;
+  try { await API.delete('/menu/categorias/' + id); cargarCategorias(); } catch (e) { toast(e.message, 'error'); }
+}
+
+async function eliminarProd(id) {
+  if (!confirm('¿Eliminar este producto?')) return;
+  try { await API.delete('/menu/productos/' + id); cargarProductos(); } catch (e) { toast(e.message, 'error'); }
+}
+
+async function toggleDisp(id, actual) {
+  try { await API.put('/menu/productos/' + id, { disponible: !actual }); cargarProductos(); } catch (e) { toast(e.message, 'error'); }
+}
+
+async function configurarMesas() {
+  const cant = parseInt(document.getElementById('cfg-mesas-cant').value);
+  if (!cant || cant < 1) { toast('Ingresa un número válido', 'warning'); return; }
+  try {
+    await API.post(`/mesas/configurar?cantidad=${cant}`, {});
+    toast(`✅ ${cant} mesas configuradas`, 'success');
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+document.addEventListener('DOMContentLoaded', () => cargarConfig());
+</script>
+</body>
+</html>

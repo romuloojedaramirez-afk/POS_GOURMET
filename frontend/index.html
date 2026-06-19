@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GourmetPOS ERP - Dashboard</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <h1>🍽️ GourmetPOS</h1>
+    <p>ERP Restaurante v2.0</p>
+  </div>
+  <ul class="sidebar-nav">
+    <li><a href="index.html" class="active"><span class="icon">📊</span> Dashboard</a></li>
+    <li><a href="pos.html"><span class="icon">🛒</span> POS / Mesas</a></li>
+    <li><a href="cocina.html"><span class="icon">👨‍🍳</span> Cocina</a></li>
+    <li><a href="clientes.html"><span class="icon">👥</span> Clientes</a></li>
+    <li><a href="reportes.html"><span class="icon">📈</span> Reportes</a></li>
+    <li><a href="whatsapp.html"><span class="icon">💬</span> WhatsApp</a></li>
+    <li><a href="admin.html"><span class="icon">⚙️</span> Configuración</a></li>
+  </ul>
+  <div class="sidebar-footer">
+    <div id="hora-actual"></div>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div class="main-wrapper">
+  <header class="header">
+    <div class="header-title">📊 Dashboard Principal</div>
+    <div class="header-right">
+      <div class="header-badge">
+        <div class="badge-dot"></div>
+        <span id="fecha-hoy"></span>
+      </div>
+      <div class="header-badge">
+        <span>🔄</span>
+        <span>Auto-actualización: 30s</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="content">
+
+    <!-- KPIs -->
+    <div class="kpi-grid" id="kpi-grid">
+      <div class="kpi-card orange"><div class="kpi-icon">🪑</div><div class="kpi-value" id="kpi-mesas-ocu">—</div><div class="kpi-label">Mesas Ocupadas</div></div>
+      <div class="kpi-card green"><div class="kpi-icon">✅</div><div class="kpi-value" id="kpi-mesas-lib">—</div><div class="kpi-label">Mesas Libres</div></div>
+      <div class="kpi-card yellow"><div class="kpi-icon">💰</div><div class="kpi-value" id="kpi-ventas">—</div><div class="kpi-label">Ventas Hoy</div></div>
+      <div class="kpi-card purple"><div class="kpi-icon">🧾</div><div class="kpi-value" id="kpi-pedidos">—</div><div class="kpi-label">Pedidos Hoy</div></div>
+      <div class="kpi-card green"><div class="kpi-icon">📦</div><div class="kpi-value" id="kpi-ticket">—</div><div class="kpi-label">Ticket Promedio</div></div>
+      <div class="kpi-card red"><div class="kpi-icon">👨‍🍳</div><div class="kpi-value" id="kpi-cocina">—</div><div class="kpi-label">En Cocina</div></div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="grid-2" style="margin-bottom:24px">
+      <div class="card">
+        <div class="card-title">📈 Ventas por Hora</div>
+        <canvas id="chart-horas" height="200"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-title">🏆 Top 5 Platos del Día</div>
+        <canvas id="chart-top" height="200"></canvas>
+      </div>
+    </div>
+
+    <!-- Bottom Row -->
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">💳 Métodos de Pago</div>
+        <canvas id="chart-pagos" height="180"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-title">📋 Últimos Pedidos</div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr><th>Ticket</th><th>Mesa</th><th>Total</th><th>Estado</th><th>Hora</th></tr>
+            </thead>
+            <tbody id="tabla-pedidos"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="assets/js/api.js"></script>
+<script>
+let chartHoras, chartTop, chartPagos;
+
+function initCharts() {
+  const defaults = { plugins: { legend: { labels: { color: '#8B8FA8', font: { size: 12 } } } } };
+  const gridColor = '#2E3250';
+
+  chartHoras = new Chart(document.getElementById('chart-horas'), {
+    type: 'line',
+    data: { labels: [], datasets: [{ label: 'Ventas (S/)', data: [], borderColor: '#FF6B35', backgroundColor: 'rgba(255,107,53,0.1)', tension: 0.4, fill: true }] },
+    options: { ...defaults, scales: { x: { ticks: { color: '#8B8FA8' }, grid: { color: gridColor } }, y: { ticks: { color: '#8B8FA8' }, grid: { color: gridColor } } } }
+  });
+
+  chartTop = new Chart(document.getElementById('chart-top'), {
+    type: 'bar',
+    data: { labels: [], datasets: [{ label: 'Unidades', data: [], backgroundColor: ['#FF6B35','#00D4A1','#FFB800','#7C6FFF','#FF4D6A'] }] },
+    options: { ...defaults, indexAxis: 'y', scales: { x: { ticks: { color: '#8B8FA8' }, grid: { color: gridColor } }, y: { ticks: { color: '#8B8FA8' }, grid: { color: gridColor } } } }
+  });
+
+  chartPagos = new Chart(document.getElementById('chart-pagos'), {
+    type: 'doughnut',
+    data: { labels: [], datasets: [{ data: [], backgroundColor: ['#FF6B35','#00D4A1','#FFB800','#7C6FFF','#FF4D6A'] }] },
+    options: { ...defaults }
+  });
+}
+
+async function actualizarDashboard() {
+  try {
+    const [kpi, topProds, metodos, ventas] = await Promise.all([
+      API.get('/reportes/dashboard'),
+      API.get('/reportes/productos-top?limite=5'),
+      API.get('/reportes/metodos-pago'),
+      API.get('/reportes/ventas-por-hora'),
+    ]);
+
+    // KPIs
+    document.getElementById('kpi-mesas-ocu').textContent = kpi.mesas_ocupadas;
+    document.getElementById('kpi-mesas-lib').textContent = kpi.mesas_libres;
+    document.getElementById('kpi-ventas').textContent = fmt(kpi.ventas_hoy);
+    document.getElementById('kpi-pedidos').textContent = kpi.total_pedidos_hoy;
+    document.getElementById('kpi-ticket').textContent = fmt(kpi.ticket_promedio);
+    document.getElementById('kpi-cocina').textContent = kpi.pedidos_cocina;
+
+    // Chart horas
+    chartHoras.data.labels = ventas.map(v => v.hora);
+    chartHoras.data.datasets[0].data = ventas.map(v => v.total);
+    chartHoras.update();
+
+    // Chart top
+    chartTop.data.labels = topProds.map(p => p.emoji + ' ' + p.nombre.substring(0, 18));
+    chartTop.data.datasets[0].data = topProds.map(p => p.total_vendido);
+    chartTop.update();
+
+    // Chart pagos
+    chartPagos.data.labels = metodos.map(m => m.metodo.toUpperCase());
+    chartPagos.data.datasets[0].data = metodos.map(m => m.total);
+    chartPagos.update();
+
+    // Tabla últimos pedidos
+    const pedidos = await API.get('/pedidos?estado=entregado');
+    const tbody = document.getElementById('tabla-pedidos');
+    tbody.innerHTML = pedidos.slice(0, 10).map(p => `
+      <tr>
+        <td><code>${p.numero_ticket || '—'}</code></td>
+        <td>${p.mesa ? 'Mesa '+p.mesa.numero : (p.canal==='whatsapp'?'📱 WhatsApp':'—')}</td>
+        <td><strong>${fmt(p.total)}</strong></td>
+        <td>${BADGE[p.estado] || p.estado}</td>
+        <td>${fmtFecha(p.created_at)}</td>
+      </tr>
+    `).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">Sin pedidos hoy</td></tr>';
+
+  } catch (e) {
+    console.error('Error actualizando dashboard:', e);
+  }
+}
+
+function actualizarReloj() {
+  const now = new Date();
+  document.getElementById('hora-actual').textContent = now.toLocaleTimeString('es-PE');
+  document.getElementById('fecha-hoy').textContent = now.toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  initCharts();
+  actualizarDashboard();
+  actualizarReloj();
+  setInterval(actualizarDashboard, 30000);
+  setInterval(actualizarReloj, 1000);
+});
+</script>
+</body>
+</html>

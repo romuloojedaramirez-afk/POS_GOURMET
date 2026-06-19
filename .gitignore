@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+*.egg-info/
+dist/
+build/
+
+# Entorno virtual
+venv/
+env/
+.venv/
+
+# Base de datos local (Railway usa PostgreSQL)
+*.db
+*.sqlite
+*.sqlite3
+gormet_pos.db
+
+# Variables de entorno (NUNCA subir al repo)
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Archivos temporales
+*.tmp
+ticket_*.txt

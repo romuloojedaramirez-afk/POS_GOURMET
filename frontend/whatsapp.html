@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GourmetPOS - WhatsApp Centro</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+<nav class="sidebar">
+  <div class="sidebar-logo"><h1>🍽️ GourmetPOS</h1><p>ERP Restaurante v2.0</p></div>
+  <ul class="sidebar-nav">
+    <li><a href="index.html"><span class="icon">📊</span> Dashboard</a></li>
+    <li><a href="pos.html"><span class="icon">🛒</span> POS / Mesas</a></li>
+    <li><a href="cocina.html"><span class="icon">👨‍🍳</span> Cocina</a></li>
+    <li><a href="clientes.html"><span class="icon">👥</span> Clientes</a></li>
+    <li><a href="reportes.html"><span class="icon">📈</span> Reportes</a></li>
+    <li><a href="whatsapp.html" class="active"><span class="icon">💬</span> WhatsApp</a></li>
+    <li><a href="admin.html"><span class="icon">⚙️</span> Configuración</a></li>
+  </ul>
+</nav>
+<div class="main-wrapper">
+  <header class="header">
+    <div class="header-title">💬 Centro de Atención WhatsApp</div>
+    <div class="header-right">
+      <div class="header-badge"><div class="badge-dot"></div><span>Bot Activo</span></div>
+      <button class="btn btn-ghost btn-sm" onclick="cargarConversaciones()">🔄 Actualizar</button>
+    </div>
+  </header>
+  <div class="content">
+
+    <!-- Prueba rápida -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-title">🧪 Simular Mensaje WhatsApp (Pruebas)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 2fr auto;gap:10px;align-items:end">
+        <div class="form-group" style="margin:0">
+          <label>Teléfono</label>
+          <input type="text" id="sim-tel" placeholder="+51999000000" value="+51999000001">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Nombre</label>
+          <input type="text" id="sim-nombre" placeholder="Juan" value="Juan Pérez">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Mensaje</label>
+          <input type="text" id="sim-msg" placeholder="hola" value="hola">
+        </div>
+        <button class="btn btn-primary" onclick="simularMensaje()">📤 Enviar</button>
+      </div>
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+        <span style="font-size:12px;color:var(--text-muted)">Atajos:</span>
+        <button class="btn btn-ghost btn-sm" onclick="simRapido('hola')">hola</button>
+        <button class="btn btn-ghost btn-sm" onclick="simRapido('ver_menu')">ver_menu</button>
+        <button class="btn btn-ghost btn-sm" onclick="simRapido('no_bebida')">no_bebida</button>
+        <button class="btn btn-ghost btn-sm" onclick="simRapido('pagar_ahora')">pagar_ahora</button>
+        <button class="btn btn-ghost btn-sm" onclick="simRapido('pago_yape')">pago_yape</button>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <!-- Conversaciones activas -->
+      <div class="card">
+        <div class="card-title">💬 Conversaciones Activas</div>
+        <div id="lista-conversaciones">
+          <div class="loading"><div class="spinner"></div></div>
+        </div>
+      </div>
+
+      <!-- Estadísticas WA -->
+      <div class="card">
+        <div class="card-title">📊 Estadísticas WhatsApp</div>
+        <div class="kpi-grid" style="grid-template-columns:1fr 1fr;margin-bottom:0">
+          <div class="kpi-card green" style="padding:14px">
+            <div class="kpi-icon" style="font-size:20px">💬</div>
+            <div class="kpi-value" style="font-size:22px" id="wa-conv-total">—</div>
+            <div class="kpi-label">Conversaciones</div>
+          </div>
+          <div class="kpi-card orange" style="padding:14px">
+            <div class="kpi-icon" style="font-size:20px">📦</div>
+            <div class="kpi-value" style="font-size:22px" id="wa-pedidos">—</div>
+            <div class="kpi-label">Pedidos WA Hoy</div>
+          </div>
+        </div>
+
+        <div style="margin-top:20px">
+          <div class="card-title">🤖 Los 10 Prompts IA Activos</div>
+          <div id="lista-prompts"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Envío manual -->
+    <div class="card" style="margin-top:20px">
+      <div class="card-title">📤 Enviar Mensaje Manual</div>
+      <div style="display:grid;grid-template-columns:1fr 2fr auto;gap:10px;align-items:end">
+        <div class="form-group" style="margin:0">
+          <label>Teléfono Destino</label>
+          <input type="text" id="env-tel" placeholder="+51999000000">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Mensaje</label>
+          <input type="text" id="env-msg" placeholder="Escribe tu mensaje aquí...">
+        </div>
+        <button class="btn btn-success" onclick="enviarManual()">📤 Enviar</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="assets/js/api.js"></script>
+<script>
+const PROMPTS_IA = [
+  { id: 1, nombre: "Bienvenida Inteligente", emoji: "👋", desc: "Saludo personalizado según historial del cliente" },
+  { id: 2, nombre: "Clasificador de Intención", emoji: "🧠", desc: "Detecta qué quiere el cliente automáticamente" },
+  { id: 3, nombre: "Recomendador Personal", emoji: "⭐", desc: "Sugiere platos según preferencias y pedidos anteriores" },
+  { id: 4, nombre: "Descriptor de Platos", emoji: "📝", desc: "Describe ingredientes y preparación de cada plato" },
+  { id: 5, nombre: "Gestor de Alergias", emoji: "🚨", desc: "Detecta y maneja restricciones alimentarias" },
+  { id: 6, nombre: "Negociador de Órdenes", emoji: "🛒", desc: "Ayuda a completar y modificar el pedido" },
+  { id: 7, nombre: "Procesador de Pagos", emoji: "💳", desc: "Guía el proceso de pago digital paso a paso" },
+  { id: 8, nombre: "Rastreador de Pedido", emoji: "📍", desc: "Informa el estado del pedido en tiempo real" },
+  { id: 9, nombre: "Manejador de Quejas", emoji: "🎯", desc: "Resuelve problemas con empatía y profesionalismo" },
+  { id: 10, nombre: "Promotor de Fidelización", emoji: "🎁", desc: "Upselling inteligente y programa de puntos" },
+];
+
+function renderPrompts() {
+  document.getElementById('lista-prompts').innerHTML = PROMPTS_IA.map(p => `
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <div style="font-size:18px;width:28px;text-align:center">${p.emoji}</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600">${p.id}. ${p.nombre}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${p.desc}</div>
+      </div>
+      <div class="badge badge-listo">Activo</div>
+    </div>
+  `).join('');
+}
+
+async function cargarConversaciones() {
+  try {
+    const convs = await API.get('/whatsapp/conversaciones');
+    document.getElementById('wa-conv-total').textContent = convs.length;
+
+    const lista = document.getElementById('lista-conversaciones');
+    if (!convs.length) {
+      lista.innerHTML = '<div class="empty-state"><div class="icon">💬</div><p>Sin conversaciones activas</p></div>';
+      return;
+    }
+
+    const estadoColors = {
+      inicio: 'badge-libre',
+      menu_categorias: 'badge-pendiente',
+      menu_productos: 'badge-preparacion',
+      detalle_producto: 'badge-ocupada',
+      confirmar_pedido: 'badge-cuenta',
+      seleccionar_pago: 'badge-cuenta',
+      pedido_enviado: 'badge-listo',
+    };
+
+    lista.innerHTML = convs.map(c => `
+      <div style="padding:12px;border-bottom:1px solid var(--border);cursor:pointer" onclick="resetConv(${c.id})">
+        <div style="display:flex;justify-content:space-between;align-items:start">
+          <div>
+            <div style="font-weight:600">👤 ${c.nombre}</div>
+            <div style="font-size:12px;color:var(--text-muted)">${c.telefono}</div>
+          </div>
+          <span class="badge ${estadoColors[c.estado_flujo] || 'badge-pendiente'}" style="font-size:10px">${c.estado_flujo}</span>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+          💬 ${c.ultimo_mensaje || '—'}
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">${fmtFecha(c.updated_at)}</div>
+      </div>
+    `).join('');
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+async function cargarPedidosWA() {
+  try {
+    const pedidos = await API.get('/pedidos?canal=whatsapp');
+    const hoy = new Date().toDateString();
+    const hoyCount = pedidos.filter(p => new Date(p.created_at).toDateString() === hoy).length;
+    document.getElementById('wa-pedidos').textContent = hoyCount;
+  } catch {}
+}
+
+async function simularMensaje() {
+  const tel = document.getElementById('sim-tel').value.trim();
+  const msg = document.getElementById('sim-msg').value.trim();
+  const nombre = document.getElementById('sim-nombre').value.trim();
+  if (!tel || !msg) { toast('Completa teléfono y mensaje', 'warning'); return; }
+  try {
+    await API.post('/whatsapp/simular', { telefono: tel, mensaje: msg, nombre });
+    toast('✅ Mensaje enviado al pipeline', 'success');
+    setTimeout(cargarConversaciones, 1500);
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+function simRapido(msg) {
+  document.getElementById('sim-msg').value = msg;
+  simularMensaje();
+}
+
+async function enviarManual() {
+  const tel = document.getElementById('env-tel').value.trim();
+  const msg = document.getElementById('env-msg').value.trim();
+  if (!tel || !msg) { toast('Completa teléfono y mensaje', 'warning'); return; }
+  try {
+    await API.post('/whatsapp/enviar', { telefono: tel, mensaje: msg });
+    toast('✅ Mensaje enviado', 'success');
+    document.getElementById('env-msg').value = '';
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+async function resetConv(id) {
+  if (!confirm('¿Resetear esta conversación?')) return;
+  try {
+    await API.delete(`/whatsapp/conversaciones/${id}`);
+    toast('Conversación reseteada', 'info');
+    cargarConversaciones();
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  renderPrompts();
+  cargarConversaciones();
+  cargarPedidosWA();
+  setInterval(cargarConversaciones, 15000);
+});
+</script>
+</body>
+</html>

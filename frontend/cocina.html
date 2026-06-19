@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GourmetPOS - Pantalla Cocina</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    body { font-size: 15px; }
+    .cocina-header-bar {
+      background: #0F1117;
+      border-bottom: 2px solid #FF6B35;
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .cocina-title { font-size: 22px; font-weight: 700; color: #FF6B35; }
+    .cocina-time  { font-size: 20px; font-weight: 700; }
+    .cocina-stats { display: flex; gap: 20px; font-size: 14px; color: #8B8FA8; }
+  </style>
+</head>
+<body style="display:block;height:auto;overflow:auto">
+
+<div class="cocina-header-bar">
+  <div>
+    <div class="cocina-title">👨‍🍳 PANTALLA DE COCINA</div>
+    <div class="cocina-stats">
+      <span>🟢 <span id="cnt-verde">0</span> a tiempo</span>
+      <span>🟡 <span id="cnt-amarillo">0</span> demorados</span>
+      <span>🔴 <span id="cnt-rojo">0</span> urgentes</span>
+    </div>
+  </div>
+  <div>
+    <div class="cocina-time" id="reloj"></div>
+    <div style="font-size:12px;color:#8B8FA8;text-align:right">Auto-actualiza cada 10s</div>
+  </div>
+</div>
+
+<div style="padding:16px">
+  <div class="cocina-grid" id="cocina-grid">
+    <div class="loading"><div class="spinner"></div> Esperando pedidos...</div>
+  </div>
+</div>
+
+<script src="assets/js/api.js"></script>
+<script>
+async function cargarCocina() {
+  try {
+    const pedidos = await API.get('/pedidos/cocina');
+    const grid = document.getElementById('cocina-grid');
+
+    let verde = 0, amarillo = 0, rojo = 0;
+
+    if (!pedidos.length) {
+      grid.innerHTML = `
+        <div class="empty-state" style="grid-column:1/-1">
+          <div class="icon">✅</div>
+          <h3>¡Todo al día!</h3>
+          <p>No hay pedidos pendientes en cocina</p>
+        </div>`;
+      document.getElementById('cnt-verde').textContent = 0;
+      document.getElementById('cnt-amarillo').textContent = 0;
+      document.getElementById('cnt-rojo').textContent = 0;
+      return;
+    }
+
+    grid.innerHTML = pedidos.map(p => {
+      if (p.urgencia === 'verde') verde++;
+      else if (p.urgencia === 'amarillo') amarillo++;
+      else rojo++;
+
+      const urgColor = { verde: '#00D4A1', amarillo: '#FFB800', rojo: '#FF4D6A' }[p.urgencia];
+
+      return `
+        <div class="cocina-card ${p.urgencia}">
+          <div class="cocina-header">
+            <div>
+              <div class="cocina-ticket">${p.numero_ticket || '#' + p.id}</div>
+              <div style="font-size:12px;color:var(--text-muted)">
+                ${p.mesa ? `Mesa ${p.mesa}` : '📱 WhatsApp'} · ${p.canal}
+              </div>
+            </div>
+            <div style="text-align:right">
+              <div class="cocina-timer" style="color:${urgColor}">⏱️ ${p.minutos} min</div>
+              <div style="font-size:11px;color:var(--text-muted)">${BADGE[p.estado] || p.estado}</div>
+            </div>
+          </div>
+
+          <div class="cocina-items">
+            ${p.items.map(i => `
+              <div class="cocina-item ${i.estado === 'listo' ? 'listo' : ''}" id="item-${p.id}-${i.id}">
+                <span style="font-size:22px">${i.emoji}</span>
+                <span class="cocina-item-qty">${i.cantidad}x</span>
+                <span style="flex:1">${i.nombre}</span>
+                ${i.notas ? `<span style="font-size:11px;color:var(--accent3);max-width:120px">📝 ${i.notas}</span>` : ''}
+                ${i.estado !== 'listo' ? `
+                  <button class="btn btn-success btn-sm"
+                    onclick="marcarItemListo(${p.id}, ${i.id})">✓</button>
+                ` : '<span style="color:var(--accent2);font-size:12px">✓ LISTO</span>'}
+              </div>
+            `).join('')}
+          </div>
+
+          ${p.notas ? `<div style="background:var(--surface2);border-radius:8px;padding:8px;font-size:13px;margin-bottom:12px">📝 ${p.notas}</div>` : ''}
+
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-success btn-sm" style="flex:1"
+              onclick="cambiarEstado(${p.id}, 'en_preparacion')">
+              🔥 En Preparación
+            </button>
+            <button class="btn btn-primary btn-sm" style="flex:1"
+              onclick="cambiarEstado(${p.id}, 'listo')">
+              ✅ Todo Listo
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    document.getElementById('cnt-verde').textContent = verde;
+    document.getElementById('cnt-amarillo').textContent = amarillo;
+    document.getElementById('cnt-rojo').textContent = rojo;
+
+  } catch (e) {
+    console.error('Error cargando cocina:', e);
+  }
+}
+
+async function marcarItemListo(pedidoId, itemId) {
+  try {
+    const res = await API.put(`/pedidos/${pedidoId}/items/${itemId}/listo`);
+    if (res.todos_listos) {
+      toast('¡Pedido completamente listo! 🎉', 'success');
+    }
+    await cargarCocina();
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+async function cambiarEstado(pedidoId, estado) {
+  try {
+    await API.put(`/pedidos/${pedidoId}/estado`, { estado });
+    if (estado === 'listo') toast('✅ Pedido marcado como listo', 'success');
+    await cargarCocina();
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+function actualizarReloj() {
+  document.getElementById('reloj').textContent = new Date().toLocaleTimeString('es-PE');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  cargarCocina();
+  actualizarReloj();
+  setInterval(cargarCocina, 10000);
+  setInterval(actualizarReloj, 1000);
+});
+</script>
+</body>
+</html>
