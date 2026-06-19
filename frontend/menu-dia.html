@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GourmetPOS — Menú del Día</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    * { box-sizing: border-box; }
+
+    /* ── LIBRARY GRID ───────────────────────────────────── */
+    .lib-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 0 14px; flex-wrap: wrap; gap: 10px;
+    }
+    .lib-search {
+      flex: 1; min-width: 200px; max-width: 340px;
+      padding: 8px 14px; border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.06);
+      color: #fff; font-size: 13px;
+    }
+    .lib-search::placeholder { color: rgba(255,255,255,0.35); }
+    .filter-cats {
+      display: flex; gap: 6px; flex-wrap: wrap;
+    }
+    .fcat {
+      padding: 4px 12px; border-radius: 20px; border: none;
+      font-size: 11px; font-weight: 600; cursor: pointer;
+      background: rgba(255,255,255,0.08); color: #aaa;
+      transition: all .15s;
+    }
+    .fcat.active { color: #fff; }
+
+    /* ── SECCIÓN CATEGORÍA ──────────────────────────────── */
+    .cat-section { margin-bottom: 18px; }
+    .cat-hdr {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 14px; border-radius: 10px;
+      font-size: 14px; font-weight: 800;
+      cursor: pointer; user-select: none;
+      margin-bottom: 6px;
+    }
+    .cat-hdr:hover { filter: brightness(1.1); }
+    .cat-hdr .cat-cnt {
+      margin-left: auto;
+      font-size: 11px; font-weight: 400;
+      opacity: .7;
+    }
+    .cat-hdr .cat-chev { font-size: 12px; transition: transform .2s; }
+    .cat-hdr.collapsed .cat-chev { transform: rotate(-90deg); }
+    .cat-body { display: flex; flex-direction: column; gap: 4px; }
+    .cat-body.hidden { display: none; }
+
+    /* ── FILA PLATO ─────────────────────────────────────── */
+    .plato-row {
+      display: grid;
+      grid-template-columns: 28px 32px 1fr auto;
+      align-items: center; gap: 8px;
+      padding: 7px 12px; border-radius: 8px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid transparent;
+      transition: all .15s; cursor: pointer;
+    }
+    .plato-row:hover { background: rgba(255,255,255,0.06); }
+    .plato-row.selected {
+      background: rgba(37,211,102,0.08);
+      border-color: rgba(37,211,102,0.3);
+    }
+    .plato-row.hidden-row { display: none; }
+
+    .plato-chk { width: 18px; height: 18px; cursor: pointer; accent-color: #25D366; }
+    .plato-emo { font-size: 20px; text-align: center; }
+    .plato-info { min-width: 0; }
+    .plato-name { font-size: 13px; font-weight: 600; }
+    .plato-desc { font-size: 10px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .plato-price {
+      display: flex; align-items: center; gap: 4px;
+    }
+    .plato-price span { font-size: 11px; color: var(--text-muted); }
+    .price-inp {
+      width: 70px; padding: 4px 6px; border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.07);
+      color: #fff; font-size: 13px; font-weight: 700;
+      text-align: right;
+    }
+    .price-inp:focus { outline: none; border-color: #25D366; }
+    .price-inp:disabled { opacity: .3; }
+
+    /* ── STICKY BOTTOM BAR ──────────────────────────────── */
+    .sticky-bar {
+      position: fixed; bottom: 0; left: 220px; right: 0;
+      background: #0F1117; border-top: 2px solid rgba(255,107,53,.5);
+      padding: 12px 24px;
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      z-index: 100;
+    }
+    .sel-badge {
+      background: #FF6B35; color: #fff;
+      font-size: 13px; font-weight: 800;
+      padding: 4px 14px; border-radius: 20px;
+    }
+    .sticky-bar .hint { font-size: 11px; color: var(--text-muted); flex: 1; }
+
+    /* ── TOAST AREA ─────────────────────────────────────── */
+    .content { padding-bottom: 80px; }
+
+    /* Seleccionar todo en categoría */
+    .sel-all-cat {
+      font-size: 10px; cursor: pointer; color: var(--text-muted);
+      text-decoration: underline; margin-left: 6px;
+    }
+    .sel-all-cat:hover { color: #25D366; }
+  </style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-logo"><h1>🍽️ GourmetPOS</h1><p>ERP Restaurante v2.0</p></div>
+  <ul class="sidebar-nav">
+    <li><a href="index.html"><span class="icon">📊</span> Dashboard</a></li>
+    <li><a href="pos.html"><span class="icon">🛒</span> POS / Mesas</a></li>
+    <li><a href="menu-dia.html" class="active"><span class="icon">🍽️</span> Menú del Día</a></li>
+    <li><a href="cocina.html"><span class="icon">👨‍🍳</span> Cocina</a></li>
+    <li><a href="clientes.html"><span class="icon">👥</span> Clientes</a></li>
+    <li><a href="reportes.html"><span class="icon">📈</span> Reportes</a></li>
+    <li><a href="whatsapp.html"><span class="icon">💬</span> WhatsApp</a></li>
+    <li><a href="admin.html"><span class="icon">⚙️</span> Configuración</a></li>
+  </ul>
+</nav>
+
+<div class="main-wrapper">
+  <header class="header">
+    <div class="header-title">🍽️ Menú del Día — <span id="fecha-hoy"></span></div>
+    <div class="header-right" style="gap:8px;display:flex;align-items:center;">
+      <span style="font-size:12px;color:var(--text-muted);">Platos activos en BD:</span>
+      <span class="badge badge-listo" id="activos-bd" style="font-size:11px;">—</span>
+    </div>
+  </header>
+
+  <div class="content">
+
+    <!-- INSTRUCCIONES -->
+    <div style="background:rgba(37,211,102,0.07);border:1px solid rgba(37,211,102,0.25);border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;gap:12px;align-items:flex-start;">
+      <span style="font-size:22px;">✅</span>
+      <div>
+        <div style="font-size:13px;font-weight:700;margin-bottom:3px;">¿Cómo funciona?</div>
+        <div style="font-size:11px;color:var(--text-muted);line-height:1.6;">
+          1. <b>Marca con ✓</b> los platos que venderás hoy — edita el precio si cambia.<br>
+          2. Haz clic en <b>"Guardar y Activar"</b> → los platos aparecen en el POS y en el WhatsApp bot.<br>
+          3. Opcionalmente presiona <b>"Enviar Menú a WhatsApp"</b> para notificar a todos tus clientes.
+        </div>
+      </div>
+    </div>
+
+    <!-- BÚSQUEDA Y FILTROS -->
+    <div class="lib-header">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex:1;">
+        <input class="lib-search" type="text" id="busqueda" placeholder="🔍 Buscar plato..." oninput="filtrar()">
+        <div class="filter-cats" id="filter-cats"></div>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-ghost btn-sm" onclick="seleccionarTodo(true)">☑ Todos</button>
+        <button class="btn btn-ghost btn-sm" onclick="seleccionarTodo(false)">☐ Ninguno</button>
+        <button class="btn btn-ghost btn-sm" onclick="cargarMenuActivo()">↻ Cargar activos</button>
+      </div>
+    </div>
+
+    <!-- BIBLIOTECA DE PLATOS -->
+    <div id="biblioteca"></div>
+
+  </div><!-- end content -->
+</div><!-- end main-wrapper -->
+
+<!-- STICKY BAR -->
+<div class="sticky-bar">
+  <span class="sel-badge" id="sel-count">0 seleccionados</span>
+  <span class="hint">Selecciona los platos del día y guarda para activarlos en el POS y WhatsApp</span>
+  <button class="btn btn-ghost btn-sm" onclick="previsualizarWA()" style="font-size:12px;">
+    👁 Vista previa WA
+  </button>
+  <button class="btn btn-primary" onclick="guardarMenu()" style="font-size:13px;padding:9px 20px;">
+    💾 Guardar y Activar en POS
+  </button>
+  <button class="btn" onclick="enviarWA()" style="font-size:13px;padding:9px 20px;background:#25D366;border-color:#25D366;color:#fff;">
+    📲 Enviar Menú a WhatsApp
+  </button>
+</div>
+
+<!-- MODAL VISTA PREVIA WA -->
+<div id="modal-wa" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:#1A1D2E;border-radius:14px;padding:24px;width:400px;max-width:95vw;max-height:80vh;overflow-y:auto;border:1px solid rgba(255,255,255,0.1);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h3 style="font-size:15px;margin:0;color:#25D366;">📱 Mensaje que recibirán tus clientes</h3>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('modal-wa').style.display='none'">✕</button>
+    </div>
+    <!-- Phone mockup -->
+    <div style="background:#0B0F1A;border-radius:10px;padding:14px;font-size:12px;line-height:1.7;white-space:pre-wrap;font-family:monospace;" id="wa-preview-text"></div>
+  </div>
+</div>
+
+<script src="assets/js/api.js"></script>
+<script>
+// ════════════════════════════════════════════════════════════════
+//  BIBLIOTECA COMPLETA DE PLATOS PERUANOS
+// ════════════════════════════════════════════════════════════════
+const BIBLIOTECA = [
+  {
+    cat:"Entradas", emoji:"🥗", color:"#00D4A1",
+    platos:[
+      {n:"Causa Limeña",         e:"🥔", d:"Causa de papa amarilla rellena de pollo o atún",        p:16, t:10},
+      {n:"Papa Rellena",         e:"🥔", d:"Papa rellena con carne molida, huevo y aceitunas",       p:15, t:15},
+      {n:"Ocopa Arequipeña",     e:"🥗", d:"Papa sancochada con salsa de ají mirasol y maní",        p:16, t:10},
+      {n:"Ceviche de Entrada",   e:"🍋", d:"Mini ceviche con limón, ají limo y cebolla morada",      p:18, t:10},
+      {n:"Anticuchos de Corazón",e:"🍢", d:"Brochetas de corazón de res marinadas en ají panca",    p:20, t:12},
+      {n:"Tequeños de Queso",    e:"🧀", d:"Palitos de queso en masa dorada y crujiente",            p:14, t:12},
+      {n:"Yuca Frita",           e:"🟡", d:"Yuca dorada acompañada de salsa huancaína",              p:12, t:10},
+      {n:"Choclo con Queso",     e:"🌽", d:"Choclo cocido con queso fresco serrano",                 p:10, t:5},
+      {n:"Tamales Criollos",     e:"🫘", d:"Tamales de maíz con cerdo, aceituna y huevo",            p:12, t:5},
+      {n:"Humitas Dulces",       e:"🌽", d:"Masa de choclo con azúcar y pasas",                      p:10, t:5},
+      {n:"Papa a la Huancaína",  e:"🧀", d:"Papa cocida bañada en salsa de ají amarillo y queso",   p:14, t:5},
+      {n:"Solterito de Queso",   e:"🥗", d:"Ensalada arequipeña con habas, choclo y queso fresco",  p:14, t:8},
+    ]
+  },
+  {
+    cat:"Sopas & Caldos", emoji:"🍲", color:"#FFB800",
+    platos:[
+      {n:"Caldo de Gallina",       e:"🐔", d:"Caldo casero con gallina, fideos y huevo cocido",        p:14, t:5},
+      {n:"Aguadito de Pollo",      e:"🍵", d:"Sopa verde de pollo con culantro y arroz",               p:15, t:10},
+      {n:"Sopa Criolla",           e:"🍜", d:"Fideos con carne molida, leche evaporada y tomate",      p:14, t:10},
+      {n:"Parihuela de Mariscos",  e:"🦞", d:"Sopa de mariscos con ají panca y chicha de jora",       p:28, t:20},
+      {n:"Chupe de Camarones",     e:"🦐", d:"Sopa cremosa con camarones, papa, leche y ají",         p:32, t:25},
+      {n:"Caldo de Res con Verduras",e:"🥩", d:"Caldo con costilla, papa, zanahoria y yuca",          p:14, t:10},
+      {n:"Sancochado Criollo",     e:"🍖", d:"Caldo de res con papa, camote, zanahoria y col",        p:18, t:15},
+      {n:"Crema de Espárragos",    e:"🥬", d:"Crema suave de espárragos con croutons",                p:12, t:10},
+      {n:"Timpo Puneño",           e:"🫕", d:"Sopa de cordero con chuño y moraya",                    p:20, t:15},
+      {n:"Shambar Trujillano",     e:"🫘", d:"Sopa de trigo con menestras y cerdo — tradición del norte",p:16, t:10},
+      {n:"Caldo de Cabeza",        e:"🍲", d:"Caldo de res con papas y hierbabuena",                  p:12, t:5},
+    ]
+  },
+  {
+    cat:"Mariscos & Cevichería", emoji:"🐟", color:"#4FC3F7",
+    platos:[
+      {n:"Ceviche Clásico",         e:"🍋", d:"Pescado fresco con limón, ají limo y cebolla morada",   p:32, t:15},
+      {n:"Ceviche Mixto",           e:"🦑", d:"Pescado, camarones, pulpo y pota en leche de tigre",    p:38, t:15},
+      {n:"Ceviche de Conchas Negras",e:"🦪", d:"Conchas negras con limón y ají limo — manjar del norte",p:40, t:10},
+      {n:"Tiradito Clásico",        e:"🐟", d:"Finas láminas de pescado en salsa de ají amarillo",     p:30, t:10},
+      {n:"Tiradito Nikkei",         e:"🐠", d:"Pescado con salsa de maracuyá, soya y jengibre",        p:35, t:10},
+      {n:"Jalea de Mariscos",       e:"🦑", d:"Mariscos fritos con yuca, zarza criolla y ají",         p:42, t:20},
+      {n:"Chicharrón de Calamar",   e:"🦑", d:"Aros de calamar fritos con tartar de ají amarillo",     p:30, t:15},
+      {n:"Arroz con Mariscos",      e:"🦐", d:"Arroz cremoso con mariscos en salsa al ajillo",         p:38, t:25},
+      {n:"Chaufa de Mariscos",      e:"🍚", d:"Arroz chaufa wok con camarones, pulpo y calamar",       p:36, t:20},
+      {n:"Conchas a la Parmesana",  e:"🦪", d:"Conchas negras gratinadas con parmesano y mantequilla", p:40, t:15},
+      {n:"Sudado de Pescado",       e:"🐠", d:"Pescado cocido en salsa criolla con chicha de jora",    p:32, t:20},
+      {n:"Pulpo al Olivo",          e:"🐙", d:"Pulpo cocido sobre salsa de aceitunas negras y limón",  p:45, t:15},
+      {n:"Leche de Tigre",          e:"🥛", d:"Shots de leche de tigre con trocitos de pescado",       p:12, t:5},
+    ]
+  },
+  {
+    cat:"Platos de Fondo", emoji:"🍽️", color:"#FF6B35",
+    platos:[
+      {n:"Lomo Saltado",              e:"🥩", d:"Lomo de res salteado con tomate, cebolla y papas fritas",p:32, t:20},
+      {n:"Ají de Gallina",            e:"🐔", d:"Gallina en salsa cremosa de ají amarillo con papa",     p:26, t:20},
+      {n:"Arroz con Pollo",           e:"🍗", d:"Arroz verde con pollo guisado y culantro fresco",        p:24, t:25},
+      {n:"Carapulcra con Sopa Seca",  e:"🥔", d:"Guiso de papa seca con cerdo, maní y fideos al tomate", p:26, t:25},
+      {n:"Seco de Res",               e:"🥩", d:"Guiso de res con culantro, chicha y frejoles",           p:28, t:25},
+      {n:"Adobo Arequipeño",          e:"🌶️", d:"Cerdo marinado en chicha, ají y especias — tradición domingo",p:28, t:20},
+      {n:"Pepián de Pato",            e:"🦆", d:"Pato guisado en salsa de maíz tostado y ají amarillo",  p:32, t:30},
+      {n:"Tallarín Saltado de Res",   e:"🍝", d:"Fideos salteados wok con carne de res y verduras",      p:28, t:20},
+      {n:"Estofado de Pollo",         e:"🍗", d:"Pollo guisado con aceitunas, pasas y papas",             p:24, t:25},
+      {n:"Bisteck a lo Pobre",        e:"🍳", d:"Bisteck con arroz, papas fritas, huevo frito y plátano", p:28, t:20},
+      {n:"Patita con Maní",           e:"🐾", d:"Patita de cerdo en salsa de maní con papas",             p:22, t:20},
+      {n:"Tacu Tacu con Bisteck",     e:"🍱", d:"Arroz y frejoles reforzados con bisteck a la plancha",   p:26, t:20},
+      {n:"Caigua Rellena",            e:"🥬", d:"Caigua rellena de carne molida con salsa de tomate",     p:22, t:25},
+      {n:"Cau Cau de Mondongo",       e:"🫕", d:"Mondongo en salsa de ají amarillo con yerbabuena",       p:22, t:25},
+    ]
+  },
+  {
+    cat:"Parrillas & Pollos", emoji:"🍗", color:"#FF8C00",
+    platos:[
+      {n:"Pollo a la Brasa ¼",       e:"🍗", d:"Cuarto de pollo a la brasa con papas fritas y ají",      p:22, t:30},
+      {n:"Pollo a la Brasa ½",       e:"🍗", d:"Medio pollo a la brasa con papas fritas y ensalada",     p:38, t:30},
+      {n:"Pollo a la Brasa Entero",  e:"🍗", d:"Pollo entero con papas, ensalada y 3 cremas",            p:68, t:45},
+      {n:"Anticuchos Parrilla",      e:"🍢", d:"Brochetas de corazón de res con papas y choclo",          p:24, t:15},
+      {n:"Churrasco de Res",         e:"🥩", d:"Corte de res a la parrilla con chimichurri criollo",     p:38, t:20},
+      {n:"Costillas BBQ",            e:"🍖", d:"Costillas de cerdo a la parrilla con salsa BBQ criolla",  p:42, t:35},
+      {n:"Brochetas Mixtas",         e:"🍢", d:"Pollo, res y cerdo a la parrilla con pimientos",          p:36, t:20},
+      {n:"Pollo a la Plancha",       e:"🍗", d:"Pechuga a la plancha con ensalada y papas al horno",     p:24, t:15},
+      {n:"Parrilla Familiar",        e:"🔥", d:"Mix de carnes, chorizos y anticuchos para compartir",     p:58, t:35},
+      {n:"Chicharrón de Cerdo",      e:"🐷", d:"Chicharrón crocante con camote sancochado y salsa criolla",p:28, t:20},
+    ]
+  },
+  {
+    cat:"Menús Ejecutivos", emoji:"🍱", color:"#9C27B0",
+    platos:[
+      {n:"Menú del Día",             e:"🍱", d:"Entrada + Plato de fondo + Refresco incluido",           p:18, t:15},
+      {n:"Menú Especial",            e:"🍱", d:"Ensalada + Caldo + Plato + Postre + Refresco",           p:25, t:15},
+      {n:"Menú Ejecutivo Premium",   e:"🥂", d:"Entrada + Caldo + Plato premium + Postre + Bebida",      p:35, t:15},
+      {n:"Media Ración + Bebida",    e:"🍽️", d:"Media porción de plato de fondo + refresco natural",    p:14, t:15},
+      {n:"Menú Niños",               e:"🧒", d:"Porción pequeña de plato + jugo + postre infantil",      p:12, t:15},
+      {n:"Menú Vegetariano",         e:"🥗", d:"Entrada vegetal + plato sin carne + infusión",           p:20, t:15},
+    ]
+  },
+  {
+    cat:"Postres", emoji:"🍰", color:"#E91E63",
+    platos:[
+      {n:"Arroz con Leche",          e:"🍚", d:"Arroz cocido en leche con canela y coco rallado",         p:8,  t:3},
+      {n:"Mazamorra Morada",         e:"🍇", d:"Postre de maíz morado con frutas y canela",               p:8,  t:3},
+      {n:"Suspiro Limeño",           e:"💜", d:"Crema de lúcuma con merengue italiano y oporto",          p:12, t:5},
+      {n:"Picarones con Miel",       e:"🍩", d:"Buñuelos de zapallo y camote con miel de chancaca",       p:10, t:10},
+      {n:"Helado de Lúcuma",         e:"🍦", d:"Helado artesanal de lúcuma peruana",                      p:10, t:3},
+      {n:"Leche Asada",              e:"🍮", d:"Flan casero con caramelo y crema chantilly",               p:10, t:3},
+      {n:"Torta Tres Leches",        e:"🎂", d:"Bizcocho empapado en tres leches con crema batida",       p:12, t:5},
+      {n:"Alfajores",                e:"🍪", d:"Galletas con manjar blanco y azúcar glass",               p:6,  t:3},
+      {n:"Churros con Chocolate",    e:"🍫", d:"Churros crujientes con dip de chocolate caliente",        p:10, t:8},
+      {n:"Flan de Coco",             e:"🥥", d:"Flan suave con leche de coco y caramelo",                 p:10, t:3},
+    ]
+  },
+  {
+    cat:"Bebidas", emoji:"🥤", color:"#03A9F4",
+    platos:[
+      {n:"Chicha Morada",            e:"🟣", d:"Bebida refrescante de maíz morado con frutas y canela",   p:5,  t:2},
+      {n:"Limonada Natural",         e:"🍋", d:"Jugo de limón fresco con azúcar y hielo",                 p:5,  t:3},
+      {n:"Refresco de Maracuyá",     e:"🟡", d:"Maracuyá natural con azúcar",                             p:6,  t:3},
+      {n:"Inca Kola",                e:"🟡", d:"Bebida gaseosa nacional — sabor cuarzo",                  p:5,  t:1},
+      {n:"Coca Cola",                e:"🔴", d:"Gaseosa",                                                   p:5,  t:1},
+      {n:"Agua Mineral",             e:"💧", d:"Agua sin gas o con gas — 500ml",                           p:3,  t:1},
+      {n:"Emoliente",                e:"🌿", d:"Bebida herbal caliente con cola de caballo y linaza",     p:3,  t:3},
+      {n:"Maca con Leche",           e:"🥛", d:"Batido energizante de maca con leche evaporada",          p:7,  t:3},
+      {n:"Jugo de Naranja Natural",  e:"🍊", d:"Jugo de naranja recién exprimido",                        p:6,  t:3},
+      {n:"Batido de Lúcuma",         e:"🥤", d:"Batido cremoso de lúcuma con leche",                      p:8,  t:5},
+      {n:"Cerveza Nacional",         e:"🍺", d:"Cerveza peruana en botella 620ml",                        p:8,  t:1},
+      {n:"Pisco Sour",               e:"🍸", d:"Pisco, limón, jarabe, clara de huevo y amargo de angostura",p:18,t:5},
+      {n:"Infusión de Muña",         e:"🌿", d:"Hierba andina con propiedades digestivas",                 p:3,  t:5},
+    ]
+  },
+];
+
+// ════════════════════════════════════════════════════════════════
+//  ESTADO
+// ════════════════════════════════════════════════════════════════
+// seleccionados = { "Categoria|Nombre": {cat, nombre, emoji, precio, desc, tiempo} }
+let seleccionados = {};
+let filtroCat = null;
+
+// ════════════════════════════════════════════════════════════════
+//  RENDER
+// ════════════════════════════════════════════════════════════════
+function renderBiblioteca() {
+  const q = (document.getElementById('busqueda')?.value || '').toLowerCase();
+
+  document.getElementById('biblioteca').innerHTML = BIBLIOTECA
+    .filter(sec => !filtroCat || sec.cat === filtroCat)
+    .map(sec => {
+      const rows = sec.platos
+        .map((p, i) => {
+          const key    = `${sec.cat}|${p.n}`;
+          const sel    = !!seleccionados[key];
+          const precio = seleccionados[key]?.precio ?? p.p;
+          const oculto = q && !p.n.toLowerCase().includes(q) && !p.d.toLowerCase().includes(q) && !sec.cat.toLowerCase().includes(q);
+          return `
+            <div class="plato-row ${sel?'selected':''} ${oculto?'hidden-row':''}"
+                 id="row-${sec.cat.replace(/\W/g,'')}-${i}"
+                 onclick="togglePlato('${sec.cat}','${p.n.replace(/'/g,"\\'")}',${i})">
+              <input type="checkbox" class="plato-chk" ${sel?'checked':''} onclick="event.stopPropagation();togglePlato('${sec.cat}','${p.n.replace(/'/g,"\\'")}',${i})">
+              <span class="plato-emo">${p.e}</span>
+              <div class="plato-info">
+                <div class="plato-name">${p.n}</div>
+                <div class="plato-desc">${p.d}</div>
+              </div>
+              <div class="plato-price" onclick="event.stopPropagation()">
+                <span>S/</span>
+                <input type="number" class="price-inp" value="${precio}" min="0" step="0.5"
+                  ${sel?'':'disabled'}
+                  id="price-${sec.cat.replace(/\W/g,'')}-${i}"
+                  onchange="actualizarPrecio('${sec.cat}','${p.n.replace(/'/g,"\\'")}',this.value)">
+              </div>
+            </div>`;
+        }).join('');
+
+      const totalSec = sec.platos.filter(p => {
+        const key = `${sec.cat}|${p.n}`;
+        return !!seleccionados[key];
+      }).length;
+
+      return `
+        <div class="cat-section" id="sec-${sec.cat.replace(/\W/g,'')}">
+          <div class="cat-hdr" style="background:${sec.color}22;border:1px solid ${sec.color}44;color:${sec.color};"
+               onclick="toggleCat('${sec.cat.replace(/\W/g,'')}',this)">
+            ${sec.emoji} ${sec.cat}
+            <span class="cat-cnt">${totalSec} seleccionados de ${sec.platos.length}</span>
+            <span class="sel-all-cat" onclick="event.stopPropagation();seleccionarCategoria('${sec.cat}',true)">☑ todos</span>
+            <span class="sel-all-cat" onclick="event.stopPropagation();seleccionarCategoria('${sec.cat}',false)" style="margin-left:0">☐ ninguno</span>
+            <span class="cat-chev">▾</span>
+          </div>
+          <div class="cat-body" id="body-${sec.cat.replace(/\W/g,'')}">
+            ${rows}
+          </div>
+        </div>`;
+    }).join('');
+
+  actualizarContador();
+}
+
+function toggleCat(id, hdr) {
+  const body = document.getElementById('body-'+id);
+  const collapsed = body.classList.toggle('hidden');
+  hdr.classList.toggle('collapsed', collapsed);
+}
+
+function renderFiltros() {
+  document.getElementById('filter-cats').innerHTML =
+    [`<button class="fcat ${!filtroCat?'active':''}" onclick="setFiltro(null)" style="background:${!filtroCat?'rgba(255,255,255,0.2)':''}">Todas</button>`]
+    .concat(BIBLIOTECA.map(s =>
+      `<button class="fcat ${filtroCat===s.cat?'active':''}" onclick="setFiltro('${s.cat}')"
+        style="background:${filtroCat===s.cat?s.color+'33':'rgba(255,255,255,0.08)'};color:${filtroCat===s.cat?s.color:'#aaa'};">
+        ${s.emoji} ${s.cat}
+      </button>`
+    )).join('');
+}
+
+function setFiltro(cat) {
+  filtroCat = cat;
+  renderFiltros();
+  renderBiblioteca();
+}
+
+function filtrar() {
+  renderBiblioteca();
+}
+
+// ════════════════════════════════════════════════════════════════
+//  SELECCIÓN
+// ════════════════════════════════════════════════════════════════
+function togglePlato(cat, nombre, idx) {
+  const key = `${cat}|${nombre}`;
+  const sec  = BIBLIOTECA.find(s => s.cat === cat);
+  const plato= sec?.platos.find(p => p.n === nombre);
+  if (!plato) return;
+
+  if (seleccionados[key]) {
+    delete seleccionados[key];
+  } else {
+    seleccionados[key] = {
+      cat, nombre, emoji: plato.e,
+      precio: plato.p, descripcion: plato.d, tiempo_prep: plato.t
+    };
+  }
+  renderBiblioteca();
+}
+
+function actualizarPrecio(cat, nombre, valor) {
+  const key = `${cat}|${nombre}`;
+  if (seleccionados[key]) {
+    seleccionados[key].precio = parseFloat(valor) || 0;
+  }
+}
+
+function seleccionarTodo(marcar) {
+  if (marcar) {
+    BIBLIOTECA.forEach(sec => sec.platos.forEach(p => {
+      seleccionados[`${sec.cat}|${p.n}`] = {
+        cat:sec.cat, nombre:p.n, emoji:p.e, precio:p.p, descripcion:p.d, tiempo_prep:p.t
+      };
+    }));
+  } else {
+    seleccionados = {};
+  }
+  renderBiblioteca();
+}
+
+function seleccionarCategoria(cat, marcar) {
+  const sec = BIBLIOTECA.find(s => s.cat === cat);
+  if (!sec) return;
+  if (marcar) {
+    sec.platos.forEach(p => {
+      seleccionados[`${cat}|${p.n}`] = {
+        cat, nombre:p.n, emoji:p.e, precio:p.p, descripcion:p.d, tiempo_prep:p.t
+      };
+    });
+  } else {
+    sec.platos.forEach(p => { delete seleccionados[`${cat}|${p.n}`]; });
+  }
+  renderBiblioteca();
+}
+
+function actualizarContador() {
+  const n = Object.keys(seleccionados).length;
+  document.getElementById('sel-count').textContent = `${n} plato${n!==1?'s':''} seleccionado${n!==1?'s':''}`;
+}
+
+// ════════════════════════════════════════════════════════════════
+//  CARGAR MENÚ ACTIVO DESDE BD
+// ════════════════════════════════════════════════════════════════
+async function cargarMenuActivo() {
+  try {
+    const menu = await API.get('/menu/completo');
+    let total = 0;
+    seleccionados = {};
+
+    menu.forEach(cat => {
+      cat.productos.forEach(p => {
+        // Buscar en la biblioteca
+        const sec = BIBLIOTECA.find(s => s.cat === cat.nombre || cat.nombre.includes(s.cat.split('&')[0].trim()));
+        const catName = sec ? sec.cat : cat.nombre;
+        const key = `${catName}|${p.nombre}`;
+        seleccionados[key] = {
+          cat: catName, nombre: p.nombre, emoji: p.emoji,
+          precio: p.precio, descripcion: p.descripcion, tiempo_prep: p.tiempo_prep
+        };
+        total++;
+      });
+    });
+
+    document.getElementById('activos-bd').textContent = total;
+    renderBiblioteca();
+    if (total > 0) toast(`✅ ${total} platos cargados desde la BD`, 'success');
+    else toast('BD vacía — selecciona los platos para hoy', 'info');
+  } catch(e) { console.error(e); }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  GUARDAR EN BD
+// ════════════════════════════════════════════════════════════════
+async function guardarMenu() {
+  const items = Object.values(seleccionados);
+  if (!items.length) { toast('Selecciona al menos un plato', 'warning'); return; }
+
+  try {
+    const payload = items.map(s => ({
+      categoria:   s.cat,
+      nombre:      s.nombre,
+      emoji:       s.emoji,
+      precio:      s.precio,
+      descripcion: s.descripcion,
+      tiempo_prep: s.tiempo_prep,
+    }));
+    const res = await API.post('/menu/activar-dia', payload);
+    document.getElementById('activos-bd').textContent = res.activados;
+    toast(`✅ ${res.activados} platos activados — ya aparecen en el POS y WhatsApp`, 'success');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  ENVÍO A WHATSAPP
+// ════════════════════════════════════════════════════════════════
+function buildMsgWA() {
+  const items = Object.values(seleccionados);
+  if (!items.length) return null;
+
+  // Agrupar por categoría
+  const bycat = {};
+  items.forEach(i => {
+    if (!bycat[i.cat]) bycat[i.cat] = [];
+    bycat[i.cat].push(i);
+  });
+
+  const hoy = new Date().toLocaleDateString('es-PE',{weekday:'long',day:'numeric',month:'long'});
+  let msg = `🍽️ *MENÚ DEL DÍA*\n📅 ${hoy.charAt(0).toUpperCase()+hoy.slice(1)}\n\n`;
+
+  Object.entries(bycat).forEach(([cat, platos]) => {
+    const sec = BIBLIOTECA.find(s=>s.cat===cat);
+    msg += `${sec?.emoji||'🍽️'} *${cat.toUpperCase()}*\n`;
+    platos.forEach(p => {
+      msg += `  ${p.emoji} ${p.nombre} — S/ ${p.precio.toFixed(2)}\n`;
+    });
+    msg += '\n';
+  });
+
+  msg += `📲 Escribe *hola* para hacer tu pedido\n`;
+  msg += `🏠 Delivery disponible — ¡Pide ahora!`;
+  return msg;
+}
+
+function previsualizarWA() {
+  const msg = buildMsgWA();
+  if (!msg) { toast('Selecciona platos primero', 'warning'); return; }
+  document.getElementById('wa-preview-text').textContent = msg;
+  document.getElementById('modal-wa').style.display = 'flex';
+}
+
+async function enviarWA() {
+  const msg = buildMsgWA();
+  if (!msg) { toast('Selecciona platos primero', 'warning'); return; }
+
+  if (!confirm(`¿Enviar el menú del día a todos tus contactos de WhatsApp?`)) return;
+
+  try {
+    // Primero guardar en BD si no se ha guardado
+    const items = Object.values(seleccionados);
+    await API.post('/menu/activar-dia', items.map(s=>({
+      categoria:s.cat, nombre:s.nombre, emoji:s.emoji,
+      precio:s.precio, descripcion:s.descripcion, tiempo_prep:s.tiempo_prep
+    })));
+
+    // Enviar a todos los contactos
+    const res = await API.post('/whatsapp/envio-masivo', {
+      mensaje: msg, tipo: 'texto', botones: []
+    });
+    toast(`✅ Menú enviado a ${res.enviados} clientes por WhatsApp`, 'success');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  // Fecha de hoy
+  const hoy = new Date().toLocaleDateString('es-PE',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  document.getElementById('fecha-hoy').textContent = hoy.charAt(0).toUpperCase()+hoy.slice(1);
+
+  renderFiltros();
+  renderBiblioteca();
+  cargarMenuActivo(); // Carga lo que ya está activo en la BD
+});
+</script>
+</body>
+</html>

@@ -110,6 +110,54 @@ def eliminar_producto(prod_id: int, db: Session = Depends(get_db)):
     return {"ok": True}
 
 
+@router.post("/activar-dia")
+def activar_menu_dia(items: list, db: Session = Depends(get_db)):
+    """
+    Activa los platos elegidos para el día de hoy.
+    Desactiva todos los demás productos en la BD.
+    Crea el producto si no existe, o actualiza precio/datos si ya existe.
+    """
+    # Desactivar todo
+    db.query(Producto).update({Producto.disponible: False})
+    db.flush()
+
+    activados = 0
+    for item in items:
+        cat_nombre = item.get("categoria", "")
+        cat = db.query(Categoria).filter(
+            Categoria.nombre.ilike(f"%{cat_nombre.split('&')[0].strip()}%")
+        ).first()
+        if not cat:
+            continue
+
+        prod = db.query(Producto).filter(
+            Producto.categoria_id == cat.id,
+            Producto.nombre       == item["nombre"]
+        ).first()
+
+        if prod:
+            prod.precio      = float(item.get("precio", prod.precio))
+            prod.disponible  = True
+            prod.descripcion = item.get("descripcion", prod.descripcion) or prod.descripcion
+            prod.emoji       = item.get("emoji", prod.emoji) or prod.emoji
+            prod.tiempo_prep = int(item.get("tiempo_prep", prod.tiempo_prep) or 15)
+        else:
+            prod = Producto(
+                categoria_id = cat.id,
+                nombre       = item["nombre"],
+                descripcion  = item.get("descripcion", ""),
+                precio       = float(item.get("precio", 0)),
+                emoji        = item.get("emoji", "🍽️"),
+                tiempo_prep  = int(item.get("tiempo_prep", 15)),
+                disponible   = True,
+            )
+            db.add(prod)
+        activados += 1
+
+    db.commit()
+    return {"ok": True, "activados": activados}
+
+
 @router.get("/completo")
 def menu_completo(db: Session = Depends(get_db)):
     """Devuelve el menú completo organizado por categorías."""
