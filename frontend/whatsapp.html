@@ -723,7 +723,7 @@ async function cargarConversaciones() {
     document.getElementById('h-convs').textContent   = convs.length;
   } catch {}
   try {
-    const peds = await API.get('/pedidos');
+    const peds = await API.get('/pedidos/');
     const hoy  = new Date().toDateString();
     const hp   = peds.filter(p=>new Date(p.created_at).toDateString()===hoy);
     document.getElementById('h-peds').textContent   = hp.length;
