@@ -113,6 +113,7 @@ class Pedido(Base):
     metodo_pago = Column(SAEnum(MetodoPago), nullable=True)
     notas = Column(Text, default="")
     numero_ticket = Column(String(20), unique=True, nullable=True)
+    prioridad = Column(String(10), default="normal")  # normal / alta / urgente
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     cerrado_at = Column(DateTime, nullable=True)
@@ -194,3 +195,20 @@ class ConfigRestaurante(Base):
     clave = Column(String(100), unique=True, nullable=False)
     valor = Column(Text, default="")
     descripcion = Column(String(300), default="")
+
+
+class MensajeProgramado(Base):
+    """Mensajes automáticos que se envían a todos los contactos en el horario configurado."""
+    __tablename__ = "mensajes_programados"
+
+    id = Column(Integer, primary_key=True, index=True)
+    nombre = Column(String(100), nullable=False)          # Ej: "Menú del almuerzo"
+    tipo = Column(String(20), default="texto")            # texto / botones / menu
+    mensaje = Column(Text, nullable=False)
+    botones_json = Column(Text, default="[]")             # JSON lista de botones
+    hora = Column(String(5), nullable=False)              # "11:30"
+    dias = Column(String(50), default="lunes,martes,miercoles,jueves,viernes,sabado,domingo")
+    activo = Column(Boolean, default=True)
+    destinatarios = Column(String(20), default="todos")   # todos / nueva_lista
+    ultimo_envio = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)

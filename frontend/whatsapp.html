@@ -673,6 +673,175 @@
 </div><!-- end ops-layout -->
 </div><!-- end main-wrapper -->
 
+<!-- ══════════════════════════════════════════════════════════════
+     PANEL: ENVIAR A NÚMERO + CONTACTOS + MENSAJES PROGRAMADOS
+     ══════════════════════════════════════════════════════════════ -->
+<div class="main-wrapper" style="margin-top:0;padding-top:0;">
+
+<div class="ops-hdr" style="margin-top:0;">
+  <h2 style="font-size:14px;font-weight:800;">📱 Envío Directo a Clientes</h2>
+  <div style="display:flex;gap:7px;">
+    <button class="btn btn-ghost btn-sm" onclick="cargarContactos()">🔄 Actualizar Contactos</button>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;padding:0 20px 20px;">
+
+  <!-- CONTACTOS DE LA BD -->
+  <div class="info-panel" style="max-height:420px;overflow-y:auto;">
+    <div class="info-title" style="position:sticky;top:0;background:var(--surface);z-index:5;padding-bottom:8px;">
+      👥 Contactos en BD <span class="badge badge-listo" id="total-contactos" style="font-size:9px;">0</span>
+    </div>
+    <input style="width:100%;font-size:11px;padding:5px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#fff;margin-bottom:8px;"
+      placeholder="🔍 Buscar..." oninput="filtrarContactos(this.value)">
+    <div id="lista-contactos">
+      <div style="font-size:11px;color:var(--text-muted);">Cargando...</div>
+    </div>
+  </div>
+
+  <!-- ENVÍO INDIVIDUAL -->
+  <div class="info-panel">
+    <div class="info-title">✉️ Enviar Mensaje</div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <div>
+        <label style="font-size:10px;color:var(--text-muted);">NÚMERO WHATSAPP</label>
+        <input id="dir-tel" type="text" placeholder="+51 999 000 001"
+          style="width:100%;font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);color:#fff;margin-top:3px;">
+      </div>
+      <div>
+        <label style="font-size:10px;color:var(--text-muted);">NOMBRE DEL CLIENTE</label>
+        <input id="dir-nombre" type="text" placeholder="Juan Pérez"
+          style="width:100%;font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);color:#fff;margin-top:3px;">
+      </div>
+      <div>
+        <label style="font-size:10px;color:var(--text-muted);">TIPO DE MENSAJE</label>
+        <select id="dir-tipo" style="width:100%;font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:#1A1D2E;color:#fff;margin-top:3px;" onchange="toggleBotones(this.value)">
+          <option value="texto">💬 Texto simple</option>
+          <option value="botones">🔘 Con botones (máx 3)</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:10px;color:var(--text-muted);">MENSAJE</label>
+        <textarea id="dir-msg" rows="3" placeholder="Escribe el mensaje para el cliente..."
+          style="width:100%;font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);color:#fff;margin-top:3px;resize:vertical;"></textarea>
+      </div>
+      <div id="dir-botones-sec" style="display:none;">
+        <label style="font-size:10px;color:var(--text-muted);">BOTONES (uno por línea, máx 3)</label>
+        <textarea id="dir-botones" rows="3" placeholder="Ver Menú&#10;Mis Pedidos&#10;Ubicación"
+          style="width:100%;font-size:11px;padding:6px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);color:#fff;margin-top:3px;resize:vertical;"></textarea>
+      </div>
+      <!-- Templates rápidos -->
+      <div>
+        <label style="font-size:10px;color:var(--text-muted);">MENSAJES RÁPIDOS</label>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">
+          <span class="atajo" onclick="tplMsg('bienvenida')">👋 Bienvenida</span>
+          <span class="atajo" onclick="tplMsg('menu')">🍽️ Ver Menú</span>
+          <span class="atajo" onclick="tplMsg('promo')">🎁 Promoción</span>
+          <span class="atajo" onclick="tplMsg('delivery')">🛵 Delivery listo</span>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="enviarDirecto()" style="font-size:12px;padding:8px;">
+        📤 Enviar por WhatsApp
+      </button>
+    </div>
+  </div>
+
+  <!-- ENVÍO MASIVO -->
+  <div class="info-panel">
+    <div class="info-title">📢 Envío Masivo a Todos</div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <div style="font-size:11px;color:var(--text-muted);background:rgba(255,184,0,0.08);border:1px solid rgba(255,184,0,0.2);border-radius:6px;padding:8px;">
+        ⚠️ Se enviará a <b id="total-masa">0</b> contactos registrados en la BD
+      </div>
+      <div>
+        <label style="font-size:10px;color:var(--text-muted);">MENSAJE PARA TODOS</label>
+        <textarea id="masa-msg" rows="4" placeholder="Ej: ¡Hola! 🍽️ Hoy tenemos platos especiales. Escríbenos para hacer tu pedido."
+          style="width:100%;font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);color:#fff;margin-top:3px;resize:vertical;"></textarea>
+      </div>
+      <button class="btn btn-primary" onclick="envioMasivo()" style="font-size:12px;padding:8px;background:#25D366;border-color:#25D366;">
+        📢 Enviar a Todos
+      </button>
+      <button class="btn btn-ghost" onclick="envioMenuDia()" style="font-size:12px;padding:8px;">
+        🍽️ Enviar Menú del Día
+      </button>
+      <div id="masa-resultado" style="font-size:11px;color:var(--text-muted);"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- MENSAJES PROGRAMADOS -->
+<div class="ops-hdr" style="margin-top:10px;">
+  <h2 style="font-size:14px;font-weight:800;">⏰ Mensajes Programados — Automáticos por Horario</h2>
+  <button class="btn btn-primary btn-sm" onclick="abrirModalProg()">+ Nuevo Programa</button>
+</div>
+
+<div style="padding:0 20px 30px;">
+  <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">
+    El sistema envía automáticamente estos mensajes a todos los contactos en el horario programado — sin que hagas nada.
+  </div>
+  <div id="lista-programados">
+    <div style="font-size:12px;color:var(--text-muted);">Cargando...</div>
+  </div>
+</div>
+
+</div><!-- end second main-wrapper -->
+
+<!-- MODAL MENSAJE PROGRAMADO -->
+<div id="modal-prog" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:#1A1D2E;border-radius:14px;padding:24px;width:460px;max-width:95vw;border:1px solid rgba(255,255,255,0.1);">
+    <h3 style="font-size:15px;margin:0 0 16px;color:#FF6B35;">⏰ Mensaje Programado</h3>
+    <input type="hidden" id="prog-id">
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div>
+        <label style="font-size:10px;color:var(--text-muted);">NOMBRE DEL PROGRAMA</label>
+        <input id="prog-nombre" type="text" placeholder="Ej: Menú del almuerzo"
+          style="width:100%;font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);color:#fff;margin-top:3px;">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div>
+          <label style="font-size:10px;color:var(--text-muted);">HORA DE ENVÍO</label>
+          <input id="prog-hora" type="time"
+            style="width:100%;font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:#1A1D2E;color:#fff;margin-top:3px;">
+        </div>
+        <div>
+          <label style="font-size:10px;color:var(--text-muted);">TIPO</label>
+          <select id="prog-tipo" style="width:100%;font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:#1A1D2E;color:#fff;margin-top:3px;">
+            <option value="texto">💬 Texto</option>
+            <option value="botones">🔘 Con Botones</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label style="font-size:10px;color:var(--text-muted);">DÍAS DE ENVÍO</label>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:5px;" id="dias-btns">
+          <label style="font-size:11px;cursor:pointer;"><input type="checkbox" value="lunes"      checked> Lun</label>
+          <label style="font-size:11px;cursor:pointer;"><input type="checkbox" value="martes"     checked> Mar</label>
+          <label style="font-size:11px;cursor:pointer;"><input type="checkbox" value="miercoles"  checked> Mié</label>
+          <label style="font-size:11px;cursor:pointer;"><input type="checkbox" value="jueves"     checked> Jue</label>
+          <label style="font-size:11px;cursor:pointer;"><input type="checkbox" value="viernes"    checked> Vie</label>
+          <label style="font-size:11px;cursor:pointer;"><input type="checkbox" value="sabado"     checked> Sáb</label>
+          <label style="font-size:11px;cursor:pointer;"><input type="checkbox" value="domingo"    checked> Dom</label>
+        </div>
+      </div>
+      <div>
+        <label style="font-size:10px;color:var(--text-muted);">MENSAJE</label>
+        <textarea id="prog-msg" rows="3"
+          style="width:100%;font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);color:#fff;margin-top:3px;resize:vertical;"></textarea>
+      </div>
+      <div>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;">
+          <input type="checkbox" id="prog-activo" checked> Activo (se enviará automáticamente)
+        </label>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      <button class="btn btn-primary" style="flex:1;font-size:12px;" onclick="guardarProg()">💾 Guardar</button>
+      <button class="btn btn-ghost"   style="flex:1;font-size:12px;" onclick="cerrarModalProg()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <script src="assets/js/api.js"></script>
 <script>
 const PROMPTS = [
@@ -899,8 +1068,261 @@ async function resetConvActiva() {
 document.addEventListener('DOMContentLoaded',()=>{
   renderPrompts();
   cargarConversaciones();
+  cargarContactos();
+  cargarProgramados();
   setInterval(cargarConversaciones, 30000);
 });
+</script>
+
+<!-- ═══════════════════════════════════════════════════════
+     JS: CONTACTOS + ENVÍO DIRECTO + MASIVO + PROGRAMADOS
+     ═══════════════════════════════════════════════════════ -->
+<script>
+let todosContactos = [];
+
+// ── CARGAR CONTACTOS ─────────────────────────────────────
+async function cargarContactos() {
+  try {
+    const res = await API.get('/whatsapp/contactos');
+    todosContactos = res.contactos || [];
+    document.getElementById('total-contactos').textContent = todosContactos.length;
+    document.getElementById('total-masa').textContent = todosContactos.length;
+    renderContactos(todosContactos);
+  } catch(e) { console.error('contactos:', e); }
+}
+
+function renderContactos(lista) {
+  const el = document.getElementById('lista-contactos');
+  if (!lista.length) {
+    el.innerHTML = '<div style="font-size:11px;color:var(--text-muted);">Sin contactos aún. Los clientes que escriban a tu WhatsApp aparecerán aquí.</div>';
+    return;
+  }
+  el.innerHTML = lista.map(c => `
+    <div style="display:flex;align-items:center;gap:7px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05);cursor:pointer;"
+         onclick="seleccionarContacto('${c.telefono}','${(c.nombre||'').replace(/'/g,"\\'")}')">
+      <div style="width:28px;height:28px;border-radius:50%;background:#25D366;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0;">
+        ${(c.nombre||'?')[0].toUpperCase()}
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.nombre||'Sin nombre'}</div>
+        <div style="font-size:10px;color:var(--text-muted);">${c.telefono} · ${c.pedidos||0} pedidos</div>
+      </div>
+      <button class="btn btn-primary btn-sm" style="font-size:10px;padding:3px 7px;flex-shrink:0;"
+        onclick="event.stopPropagation();seleccionarContacto('${c.telefono}','${(c.nombre||'').replace(/'/g,"\\'")}')">
+        ✉️
+      </button>
+    </div>`).join('');
+}
+
+function filtrarContactos(q) {
+  const f = q.toLowerCase();
+  renderContactos(todosContactos.filter(c =>
+    (c.nombre||'').toLowerCase().includes(f) ||
+    (c.telefono||'').includes(f)
+  ));
+}
+
+function seleccionarContacto(tel, nom) {
+  document.getElementById('dir-tel').value    = tel;
+  document.getElementById('dir-nombre').value = nom;
+  document.getElementById('dir-tel').scrollIntoView({ behavior:'smooth', block:'center' });
+}
+
+// ── ENVÍO DIRECTO ────────────────────────────────────────
+function toggleBotones(tipo) {
+  document.getElementById('dir-botones-sec').style.display = tipo==='botones' ? 'block' : 'none';
+}
+
+const TEMPLATES = {
+  bienvenida: '¡Hola! 👋 Bienvenido a nuestro restaurante 🍽️\n\nPuedes escribirnos para ver el menú y hacer tu pedido fácilmente.',
+  menu:       '🍽️ ¡Hola! Hoy tenemos platos especiales para ti.\n\nEscribe *menu* para ver nuestro menú completo con precios.',
+  promo:      '🎁 ¡PROMOCIÓN DEL DÍA!\n\nCompra 2 platos y obtén una bebida GRATIS.\n\nVálido solo hoy. Escribe *menu* para pedir.',
+  delivery:   '🛵 ¡Tu pedido está en camino!\n\nNuestro repartidor ya salió con tu pedido. Llegará en aproximadamente 20 minutos.\n\n¡Gracias por confiar en nosotros! 😊',
+};
+
+function tplMsg(key) {
+  document.getElementById('dir-msg').value = TEMPLATES[key] || '';
+}
+
+async function enviarDirecto() {
+  const tel    = document.getElementById('dir-tel').value.trim();
+  const nombre = document.getElementById('dir-nombre').value.trim() || 'Cliente';
+  const msg    = document.getElementById('dir-msg').value.trim();
+  const tipo   = document.getElementById('dir-tipo').value;
+  if (!tel || !msg) { toast('Ingresa número y mensaje','warning'); return; }
+
+  let botones = [];
+  if (tipo === 'botones') {
+    const lineas = document.getElementById('dir-botones').value.split('\n').filter(l=>l.trim());
+    botones = lineas.slice(0,3).map((l,i) => ({ id:`btn_${i}`, title: l.trim().slice(0,20) }));
+    if (!botones.length) { toast('Agrega al menos un botón','warning'); return; }
+  }
+
+  try {
+    await API.post('/whatsapp/enviar-directo', { telefono:tel, nombre, mensaje:msg, tipo, botones });
+    toast(`✅ Mensaje enviado a ${tel}`, 'success');
+    document.getElementById('dir-msg').value = '';
+    await cargarContactos();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ── ENVÍO MASIVO ─────────────────────────────────────────
+async function envioMasivo() {
+  const msg = document.getElementById('masa-msg').value.trim();
+  if (!msg) { toast('Escribe el mensaje','warning'); return; }
+  if (!confirm(`¿Enviar este mensaje a ${todosContactos.length} contactos?`)) return;
+  try {
+    document.getElementById('masa-resultado').textContent = '⏳ Enviando...';
+    const res = await API.post('/whatsapp/envio-masivo', { mensaje:msg, tipo:'texto', botones:[] });
+    document.getElementById('masa-resultado').textContent =
+      `✅ Enviados: ${res.enviados} | ❌ Errores: ${res.errores} | Total: ${res.total}`;
+    toast(`✅ Masivo enviado a ${res.enviados} contactos`, 'success');
+  } catch(e) { toast(e.message,'error'); document.getElementById('masa-resultado').textContent = ''; }
+}
+
+async function envioMenuDia() {
+  if (!confirm('¿Enviar el menú del día a todos los contactos?')) return;
+  try {
+    document.getElementById('masa-resultado').textContent = '⏳ Enviando menú del día...';
+    const res = await API.post('/whatsapp/envio-menu-dia', {});
+    document.getElementById('masa-resultado').textContent =
+      `✅ Menú enviado: ${res.enviados} | ❌ Errores: ${res.errores}`;
+    toast('✅ Menú del día enviado', 'success');
+  } catch(e) { toast(e.message,'error'); }
+}
+
+// ── MENSAJES PROGRAMADOS ──────────────────────────────────
+let programados = [];
+
+async function cargarProgramados() {
+  try {
+    programados = await API.get('/whatsapp/programados');
+    renderProgramados();
+  } catch(e) { console.error('programados:', e); }
+}
+
+function renderProgramados() {
+  const el = document.getElementById('lista-programados');
+  if (!programados.length) {
+    el.innerHTML = `
+      <div style="text-align:center;padding:24px;border:2px dashed rgba(255,255,255,0.1);border-radius:10px;">
+        <div style="font-size:32px;margin-bottom:8px;">⏰</div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:4px;">Sin mensajes programados</div>
+        <div style="font-size:11px;color:var(--text-muted);">Crea un programa para que el bot envíe mensajes automáticamente a tus clientes en el horario que configures.</div>
+        <button class="btn btn-primary" style="margin-top:12px;font-size:12px;" onclick="abrirModalProg()">+ Crear Primer Programa</button>
+      </div>`;
+    return;
+  }
+
+  const dias_abrev = { lunes:'Lun',martes:'Mar',miercoles:'Mié',jueves:'Jue',viernes:'Vie',sabado:'Sáb',domingo:'Dom' };
+
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;">
+      ${programados.map(m => {
+        const dias = (m.dias||'').split(',').map(d=>dias_abrev[d.trim()]||d).join(' ');
+        const ultimo = m.ultimo_envio ? new Date(m.ultimo_envio).toLocaleString('es-PE') : 'Nunca';
+        return `
+          <div style="background:#1A1D2E;border-radius:10px;padding:14px;border:1px solid ${m.activo?'rgba(37,211,102,0.3)':'rgba(255,255,255,0.08)'};">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+              <div>
+                <div style="font-size:13px;font-weight:700;">${m.nombre}</div>
+                <div style="font-size:20px;font-weight:900;color:#FF6B35;margin:4px 0;">⏰ ${m.hora}</div>
+                <div style="font-size:10px;color:var(--text-muted);">${dias}</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+                <span style="font-size:10px;padding:2px 8px;border-radius:20px;background:${m.activo?'rgba(37,211,102,0.2)':'rgba(255,255,255,0.08)'};color:${m.activo?'#25D366':'#aaa'};">
+                  ${m.activo ? '🟢 ACTIVO' : '⚫ INACTIVO'}
+                </span>
+              </div>
+            </div>
+            <div style="font-size:11px;color:var(--text-muted);background:rgba(255,255,255,0.04);border-radius:6px;padding:6px;margin-bottom:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${m.mensaje}">
+              💬 ${m.mensaje}
+            </div>
+            <div style="font-size:9px;color:var(--text-muted);margin-bottom:8px;">Último envío: ${ultimo}</div>
+            <div style="display:flex;gap:5px;">
+              <button class="btn btn-primary btn-sm" style="flex:1;font-size:10px;" onclick="enviarProgNow(${m.id})">▶ Enviar Ahora</button>
+              <button class="btn btn-ghost btn-sm"   style="flex:1;font-size:10px;" onclick="editarProg(${m.id})">✏️ Editar</button>
+              <button class="btn btn-danger btn-sm"  style="padding:3px 8px;font-size:10px;" onclick="eliminarProg(${m.id})">🗑</button>
+            </div>
+          </div>`;
+      }).join('')}
+    </div>`;
+}
+
+function abrirModalProg(id=null) {
+  document.getElementById('prog-id').value = id || '';
+  if (id) {
+    const m = programados.find(x=>x.id===id);
+    if (m) {
+      document.getElementById('prog-nombre').value = m.nombre;
+      document.getElementById('prog-hora').value   = m.hora;
+      document.getElementById('prog-tipo').value   = m.tipo;
+      document.getElementById('prog-msg').value    = m.mensaje;
+      document.getElementById('prog-activo').checked = m.activo;
+      const dias = (m.dias||'').split(',').map(d=>d.trim());
+      document.querySelectorAll('#dias-btns input').forEach(cb => {
+        cb.checked = dias.includes(cb.value);
+      });
+    }
+  } else {
+    document.getElementById('prog-nombre').value = '';
+    document.getElementById('prog-hora').value   = '11:30';
+    document.getElementById('prog-tipo').value   = 'texto';
+    document.getElementById('prog-msg').value    = '';
+    document.getElementById('prog-activo').checked = true;
+    document.querySelectorAll('#dias-btns input').forEach(cb => { cb.checked = true; });
+  }
+  document.getElementById('modal-prog').style.display = 'flex';
+}
+
+function cerrarModalProg() {
+  document.getElementById('modal-prog').style.display = 'none';
+}
+
+function editarProg(id) { abrirModalProg(id); }
+
+async function guardarProg() {
+  const id     = document.getElementById('prog-id').value;
+  const nombre = document.getElementById('prog-nombre').value.trim();
+  const hora   = document.getElementById('prog-hora').value;
+  const tipo   = document.getElementById('prog-tipo').value;
+  const msg    = document.getElementById('prog-msg').value.trim();
+  const activo = document.getElementById('prog-activo').checked;
+  const dias   = [...document.querySelectorAll('#dias-btns input:checked')].map(c=>c.value).join(',');
+
+  if (!nombre||!hora||!msg) { toast('Completa nombre, hora y mensaje','warning'); return; }
+
+  const data = { nombre, hora, tipo, mensaje:msg, activo, dias, botones:[], destinatarios:'todos' };
+  try {
+    if (id) {
+      await API.put(`/whatsapp/programados/${id}`, data);
+      toast('✅ Programa actualizado','success');
+    } else {
+      await API.post('/whatsapp/programados', data);
+      toast('✅ Programa creado','success');
+    }
+    cerrarModalProg();
+    await cargarProgramados();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function eliminarProg(id) {
+  if (!confirm('¿Eliminar este mensaje programado?')) return;
+  try {
+    await API.delete(`/whatsapp/programados/${id}`);
+    toast('Eliminado','success');
+    await cargarProgramados();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function enviarProgNow(id) {
+  if (!confirm('¿Enviar ahora este mensaje a todos los contactos?')) return;
+  try {
+    const res = await API.post(`/whatsapp/programados/${id}/enviar-ahora`, {});
+    toast(`✅ Enviado a ${res.enviados} contactos`, 'success');
+    await cargarProgramados();
+  } catch(e) { toast(e.message,'error'); }
+}
 </script>
 </body>
 </html>

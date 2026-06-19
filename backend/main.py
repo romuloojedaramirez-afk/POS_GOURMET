@@ -12,10 +12,65 @@ import asyncio
 import json
 import os
 
+from datetime import datetime
 from .database import engine, Base, SessionLocal
+from .models import MensajeProgramado, ConfigRestaurante
 from .models import *  # noqa: F401,F403
 from .seed_data import seed_database
 from .routes import mesas, menu, pedidos, caja, clientes, reportes, whatsapp_webhook, config
+from .services.whatsapp_service import WhatsAppService
+
+
+# ── SCHEDULER DE MENSAJES PROGRAMADOS ────────────────────────────────────────
+
+DIAS_SEMANA = ["lunes","martes","miercoles","jueves","viernes","sabado","domingo"]
+
+async def _ejecutar_scheduler():
+    """Revisa cada minuto si hay mensajes programados que enviar."""
+    import json as _json
+    while True:
+        await asyncio.sleep(60)
+        try:
+            ahora   = datetime.now()
+            hora_hm = ahora.strftime("%H:%M")
+            dia_hoy = DIAS_SEMANA[ahora.weekday()]
+
+            db = SessionLocal()
+            try:
+                msgs = db.query(MensajeProgramado).filter(
+                    MensajeProgramado.activo == True,
+                    MensajeProgramado.hora   == hora_hm,
+                ).all()
+
+                for m in msgs:
+                    dias_config = [d.strip().lower() for d in (m.dias or "").split(",")]
+                    if dia_hoy not in dias_config:
+                        continue
+                    # Evitar doble envío en el mismo minuto
+                    if m.ultimo_envio and m.ultimo_envio.strftime("%Y-%m-%d %H:%M") == ahora.strftime("%Y-%m-%d %H:%M"):
+                        continue
+
+                    tk  = db.query(ConfigRestaurante).filter(ConfigRestaurante.clave == "whatsapp_token").first()
+                    pid = db.query(ConfigRestaurante).filter(ConfigRestaurante.clave == "whatsapp_phone_id").first()
+                    svc = WhatsAppService(
+                        token    = (tk.valor  if tk  else None) or os.getenv("WA_TOKEN",    ""),
+                        phone_id = (pid.valor if pid else None) or os.getenv("WA_PHONE_ID", ""),
+                        db       = db,
+                    )
+                    botones = _json.loads(m.botones_json or "[]")
+                    if m.tipo == "botones" and botones:
+                        await svc.envio_masivo_botones(m.mensaje, botones)
+                    else:
+                        await svc.envio_masivo_texto(m.mensaje)
+
+                    m.ultimo_envio = ahora
+                    db.commit()
+                    print(f"[SCHEDULER] Enviado: '{m.nombre}' a las {hora_hm}")
+
+            finally:
+                db.close()
+        except Exception as e:
+            print(f"[SCHEDULER ERROR] {e}")
 
 
 # ── LIFESPAN ──────────────────────────────────────────────────────────────────
@@ -28,6 +83,8 @@ async def lifespan(app: FastAPI):
         seed_database(db)
     finally:
         db.close()
+    # Iniciar scheduler de mensajes programados
+    asyncio.create_task(_ejecutar_scheduler())
     yield
 
 

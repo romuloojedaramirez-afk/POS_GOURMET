@@ -3,150 +3,376 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GourmetPOS - Pantalla Cocina</title>
+  <title>GourmetPOS - Cocina</title>
   <link rel="stylesheet" href="assets/css/style.css">
   <style>
-    body { font-size: 15px; }
-    .cocina-header-bar {
-      background: #0F1117;
-      border-bottom: 2px solid #FF6B35;
-      padding: 12px 24px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+    * { box-sizing: border-box; }
+    body { background:#0F1117; color:#fff; font-family:'Inter',sans-serif; margin:0; overflow-x:hidden; }
+
+    /* HEADER */
+    .k-header {
+      background:#0F1117;
+      border-bottom:3px solid #FF6B35;
+      padding:10px 20px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
     }
-    .cocina-title { font-size: 22px; font-weight: 700; color: #FF6B35; }
-    .cocina-time  { font-size: 20px; font-weight: 700; }
-    .cocina-stats { display: flex; gap: 20px; font-size: 14px; color: #8B8FA8; }
+    .k-title { font-size:20px; font-weight:800; color:#FF6B35; }
+    .k-clock { font-size:22px; font-weight:700; font-variant-numeric:tabular-nums; }
+    .k-stats { display:flex; gap:12px; flex-wrap:wrap; }
+    .k-stat {
+      display:flex; align-items:center; gap:6px;
+      font-size:13px; font-weight:600;
+      background:rgba(255,255,255,0.07);
+      border-radius:20px; padding:4px 12px;
+    }
+    .k-stat .dot { width:10px; height:10px; border-radius:50%; }
+
+    /* COLUMNAS */
+    .k-board {
+      display:grid;
+      grid-template-columns:repeat(3, 1fr);
+      gap:12px;
+      padding:14px;
+      min-height:calc(100vh - 80px);
+      align-items:start;
+    }
+    .k-col { display:flex; flex-direction:column; gap:10px; }
+    .k-col-hdr {
+      border-radius:10px;
+      padding:10px 14px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      font-weight:800;
+      font-size:14px;
+      position:sticky;
+      top:10px;
+      z-index:10;
+      backdrop-filter:blur(10px);
+    }
+    .col-nuevos   .k-col-hdr { background:rgba(255,77,106,0.2); border:2px solid #FF4D6A; color:#FF4D6A; }
+    .col-prep     .k-col-hdr { background:rgba(255,184,0,0.2);  border:2px solid #FFB800; color:#FFB800; }
+    .col-listos   .k-col-hdr { background:rgba(37,211,102,0.2); border:2px solid #25D366; color:#25D366; }
+    .k-col-cnt {
+      width:24px; height:24px; border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      font-size:12px; font-weight:900;
+    }
+    .col-nuevos .k-col-cnt { background:#FF4D6A; color:#fff; }
+    .col-prep   .k-col-cnt { background:#FFB800; color:#000; }
+    .col-listos .k-col-cnt { background:#25D366; color:#fff; }
+
+    /* TARJETA */
+    .k-card {
+      background:#1A1D2E;
+      border-radius:12px;
+      border:2px solid transparent;
+      padding:12px;
+      transition:all 0.2s;
+      animation:slideIn 0.3s ease;
+    }
+    @keyframes slideIn { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
+    .k-card.prio-urgente { border-color:#FF4D6A; box-shadow:0 0 12px rgba(255,77,106,0.25); }
+    .k-card.prio-alta    { border-color:#FFB800; box-shadow:0 0 8px  rgba(255,184,0,0.2); }
+    .k-card.prio-normal  { border-color:rgba(255,255,255,0.1); }
+
+    /* PULSING para urgentes */
+    .k-card.prio-urgente { animation:urgPulse 1.5s ease-in-out infinite; }
+    @keyframes urgPulse {
+      0%,100%{box-shadow:0 0 12px rgba(255,77,106,0.25)}
+      50%    {box-shadow:0 0 22px rgba(255,77,106,0.6)}
+    }
+
+    .k-top {
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      margin-bottom:8px;
+    }
+    .k-ticket { font-size:15px; font-weight:800; }
+    .k-source { font-size:10px; color:var(--text-muted); margin-top:2px; }
+    .k-timer  { font-size:18px; font-weight:800; font-variant-numeric:tabular-nums; }
+
+    /* PRIORIDAD BADGE */
+    .prio-badge {
+      display:inline-flex; align-items:center; gap:4px;
+      font-size:10px; font-weight:700;
+      padding:2px 8px; border-radius:20px;
+      margin-bottom:6px;
+    }
+    .prio-badge.urgente { background:#FF4D6A; color:#fff; }
+    .prio-badge.alta    { background:#FFB800; color:#000; }
+    .prio-badge.normal  { background:rgba(255,255,255,0.1); color:#aaa; }
+
+    /* ITEMS */
+    .k-items { margin:8px 0; border-top:1px solid rgba(255,255,255,0.08); padding-top:8px; }
+    .k-item {
+      display:flex; align-items:center; gap:6px;
+      padding:5px 0;
+      border-bottom:1px solid rgba(255,255,255,0.05);
+      font-size:13px;
+    }
+    .k-item.listo { opacity:0.45; text-decoration:line-through; }
+    .k-item-emoji { font-size:18px; width:24px; text-align:center; }
+    .k-item-qty   { font-weight:800; color:#FF6B35; min-width:22px; }
+    .k-item-name  { flex:1; }
+    .k-item-chk   {
+      width:22px; height:22px; border-radius:50%;
+      border:2px solid rgba(37,211,102,0.5);
+      background:transparent;
+      cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+      font-size:12px;
+      transition:all 0.15s;
+    }
+    .k-item-chk:hover { background:#25D366; border-color:#25D366; }
+    .k-item-chk.done  { background:#25D366; border-color:#25D366; }
+
+    /* NOTAS */
+    .k-notas {
+      background:rgba(255,184,0,0.1);
+      border:1px solid rgba(255,184,0,0.3);
+      border-radius:6px;
+      padding:5px 8px;
+      font-size:11px;
+      color:#FFB800;
+      margin:6px 0;
+    }
+
+    /* BOTONES DE ACCIÓN */
+    .k-actions { display:flex; flex-direction:column; gap:6px; margin-top:10px; }
+    .k-prio-row { display:flex; gap:4px; }
+    .k-prio-btn {
+      flex:1; padding:4px 0; border:none; border-radius:6px;
+      font-size:10px; font-weight:700; cursor:pointer; transition:all 0.15s;
+    }
+    .k-prio-btn.urgente { background:#FF4D6A22; color:#FF4D6A; border:1px solid #FF4D6A44; }
+    .k-prio-btn.alta    { background:#FFB80022; color:#FFB800; border:1px solid #FFB80044; }
+    .k-prio-btn.normal  { background:#ffffff11; color:#aaa;    border:1px solid #ffffff22; }
+    .k-prio-btn.active.urgente { background:#FF4D6A; color:#fff; }
+    .k-prio-btn.active.alta    { background:#FFB800; color:#000; }
+    .k-prio-btn.active.normal  { background:#ffffff22; color:#fff; }
+
+    .k-btn-row  { display:flex; gap:6px; }
+    .k-btn {
+      flex:1; padding:7px 4px; border:none; border-radius:8px;
+      font-size:12px; font-weight:700; cursor:pointer; transition:all 0.15s;
+    }
+    .k-btn:active { transform:scale(0.96); }
+    .k-btn-prep  { background:#FFB80022; color:#FFB800; border:1px solid #FFB800; }
+    .k-btn-listo { background:#25D36622; color:#25D366; border:1px solid #25D366; }
+    .k-btn-ent   { background:#4FC3F722; color:#4FC3F7; border:1px solid #4FC3F7; }
+    .k-btn-del   { background:#FF4D6A22; color:#FF4D6A; border:1px solid #FF4D6A; }
+
+    /* VACÍO */
+    .k-empty {
+      text-align:center; padding:30px 20px;
+      color:rgba(255,255,255,0.2); font-size:13px;
+    }
+    .k-empty .k-empty-ico { font-size:36px; margin-bottom:8px; }
   </style>
 </head>
-<body style="display:block;height:auto;overflow:auto">
+<body>
 
-<div class="cocina-header-bar">
+<!-- HEADER -->
+<div class="k-header">
   <div>
-    <div class="cocina-title">👨‍🍳 PANTALLA DE COCINA</div>
-    <div class="cocina-stats">
-      <span>🟢 <span id="cnt-verde">0</span> a tiempo</span>
-      <span>🟡 <span id="cnt-amarillo">0</span> demorados</span>
-      <span>🔴 <span id="cnt-rojo">0</span> urgentes</span>
-    </div>
+    <div class="k-title">👨‍🍳 PANTALLA DE COCINA</div>
+  </div>
+  <div class="k-stats" id="k-stats">
+    <div class="k-stat"><span class="dot" style="background:#FF4D6A"></span><span id="cnt-urgentes">0</span> URGENTES</div>
+    <div class="k-stat"><span class="dot" style="background:#FF4D6A"></span><span id="cnt-nuevos">0</span> NUEVOS</div>
+    <div class="k-stat"><span class="dot" style="background:#FFB800"></span><span id="cnt-prep">0</span> EN PREP.</div>
+    <div class="k-stat"><span class="dot" style="background:#25D366"></span><span id="cnt-listos">0</span> LISTOS</div>
+    <div class="k-stat"><span>⏱️</span><span id="cnt-espera">— min</span> espera máx.</div>
   </div>
   <div>
-    <div class="cocina-time" id="reloj"></div>
-    <div style="font-size:12px;color:#8B8FA8;text-align:right">Auto-actualiza cada 10s</div>
+    <div class="k-clock" id="reloj">00:00:00</div>
+    <div style="font-size:10px;color:#8B8FA8;text-align:right">↻ auto cada 10s</div>
   </div>
 </div>
 
-<div style="padding:16px">
-  <div class="cocina-grid" id="cocina-grid">
-    <div class="loading"><div class="spinner"></div> Esperando pedidos...</div>
+<!-- TABLERO 3 COLUMNAS -->
+<div class="k-board">
+
+  <!-- COLUMNA 1: NUEVOS -->
+  <div class="k-col col-nuevos">
+    <div class="k-col-hdr">
+      <span>🔴 NUEVOS</span>
+      <span class="k-col-cnt" id="hdr-nuevos">0</span>
+    </div>
+    <div id="col-nuevos"></div>
   </div>
+
+  <!-- COLUMNA 2: EN PREPARACIÓN -->
+  <div class="k-col col-prep">
+    <div class="k-col-hdr">
+      <span>🟡 EN PREPARACIÓN</span>
+      <span class="k-col-cnt" id="hdr-prep">0</span>
+    </div>
+    <div id="col-prep"></div>
+  </div>
+
+  <!-- COLUMNA 3: LISTOS -->
+  <div class="k-col col-listos">
+    <div class="k-col-hdr">
+      <span>🟢 LISTOS</span>
+      <span class="k-col-cnt" id="hdr-listos">0</span>
+    </div>
+    <div id="col-listos"></div>
+  </div>
+
 </div>
 
 <script src="assets/js/api.js"></script>
 <script>
+const BADGE_CANAL = { pos:'🖥️ POS', whatsapp:'📱 WhatsApp', delivery:'🛵 Delivery' };
+
+function timerColor(min) {
+  if (min < 15) return '#25D366';
+  if (min < 30) return '#FFB800';
+  return '#FF4D6A';
+}
+
+function parioBadge(p) {
+  if (p==='urgente') return '<span class="prio-badge urgente">🚨 URGENTE</span>';
+  if (p==='alta')    return '<span class="prio-badge alta">⚡ ALTA</span>';
+  return '<span class="prio-badge normal">⬜ NORMAL</span>';
+}
+
+function renderCard(p) {
+  const col   = timerColor(p.minutos);
+  const prio  = p.prioridad || 'normal';
+  const src   = p.mesa ? `Mesa ${p.mesa}` : (p.cliente || 'WhatsApp');
+  const canal = BADGE_CANAL[p.canal] || p.canal;
+  const items = p.items.map(i => `
+    <div class="k-item ${i.estado==='listo'?'listo':''}" id="item-${p.id}-${i.id}">
+      <span class="k-item-emoji">${i.emoji}</span>
+      <span class="k-item-qty">${i.cantidad}×</span>
+      <span class="k-item-name">${i.nombre}${i.notas?` <i style="color:#FFB800;font-size:10px">(${i.notas})</i>`:''}</span>
+      ${i.estado!=='listo'
+        ? `<button class="k-item-chk" onclick="marcarItem(${p.id},${i.id},this)" title="Marcar listo">✓</button>`
+        : `<span class="k-item-chk done">✓</span>`}
+    </div>`).join('');
+
+  // Botones según estado
+  let acciones = '';
+  if (p.estado === 'pendiente') {
+    acciones = `<button class="k-btn k-btn-prep" onclick="cambiarEstado(${p.id},'en_preparacion')">🔥 Iniciar Preparación</button>`;
+  } else if (p.estado === 'en_preparacion') {
+    acciones = `
+      <button class="k-btn k-btn-listo" onclick="cambiarEstado(${p.id},'listo')">✅ Marcar Listo</button>`;
+  } else if (p.estado === 'listo') {
+    acciones = `
+      <button class="k-btn k-btn-ent" onclick="cambiarEstado(${p.id},'entregado')">🛵 Entregar</button>`;
+  }
+
+  return `
+    <div class="k-card prio-${prio}" id="card-${p.id}">
+      <div class="k-top">
+        <div>
+          <div class="k-ticket">${p.numero_ticket || '#'+p.id}</div>
+          <div class="k-source">${canal} · ${src}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="k-timer" style="color:${col}">⏱️ ${p.minutos} min</div>
+          ${p.total ? `<div style="font-size:11px;color:#aaa">S/ ${p.total.toFixed(2)}</div>` : ''}
+        </div>
+      </div>
+
+      ${parioBadge(prio)}
+
+      ${p.notas ? `<div class="k-notas">📝 ${p.notas}</div>` : ''}
+
+      <div class="k-items">${items}</div>
+
+      <div class="k-actions">
+        <div class="k-prio-row">
+          <button class="k-prio-btn normal  ${prio==='normal' ?'active':''}" onclick="setPrioridad(${p.id},'normal',  this)">⬜ Normal</button>
+          <button class="k-prio-btn alta    ${prio==='alta'   ?'active':''}" onclick="setPrioridad(${p.id},'alta',    this)">⚡ Alta</button>
+          <button class="k-prio-btn urgente ${prio==='urgente'?'active':''}" onclick="setPrioridad(${p.id},'urgente', this)">🚨 Urgente</button>
+        </div>
+        <div class="k-btn-row">${acciones}</div>
+      </div>
+    </div>`;
+}
+
 async function cargarCocina() {
   try {
     const pedidos = await API.get('/pedidos/cocina');
-    const grid = document.getElementById('cocina-grid');
 
-    let verde = 0, amarillo = 0, rojo = 0;
+    const nuevos = pedidos.filter(p => p.estado === 'pendiente');
+    const prep   = pedidos.filter(p => p.estado === 'en_preparacion');
+    const listos = pedidos.filter(p => p.estado === 'listo');
 
-    if (!pedidos.length) {
-      grid.innerHTML = `
-        <div class="empty-state" style="grid-column:1/-1">
-          <div class="icon">✅</div>
-          <h3>¡Todo al día!</h3>
-          <p>No hay pedidos pendientes en cocina</p>
-        </div>`;
-      document.getElementById('cnt-verde').textContent = 0;
-      document.getElementById('cnt-amarillo').textContent = 0;
-      document.getElementById('cnt-rojo').textContent = 0;
-      return;
-    }
+    const render = (arr, elId) => {
+      const el = document.getElementById(elId);
+      if (!arr.length) {
+        el.innerHTML = `<div class="k-empty"><div class="k-empty-ico">${elId==='col-listos'?'🎉':'⏳'}</div>${elId==='col-listos'?'Sin pedidos listos aún':'Sin pedidos aquí'}</div>`;
+      } else {
+        el.innerHTML = arr.map(renderCard).join('');
+      }
+    };
 
-    grid.innerHTML = pedidos.map(p => {
-      if (p.urgencia === 'verde') verde++;
-      else if (p.urgencia === 'amarillo') amarillo++;
-      else rojo++;
+    render(nuevos, 'col-nuevos');
+    render(prep,   'col-prep');
+    render(listos, 'col-listos');
 
-      const urgColor = { verde: '#00D4A1', amarillo: '#FFB800', rojo: '#FF4D6A' }[p.urgencia];
+    document.getElementById('hdr-nuevos').textContent = nuevos.length;
+    document.getElementById('hdr-prep'  ).textContent = prep.length;
+    document.getElementById('hdr-listos').textContent = listos.length;
 
-      return `
-        <div class="cocina-card ${p.urgencia}">
-          <div class="cocina-header">
-            <div>
-              <div class="cocina-ticket">${p.numero_ticket || '#' + p.id}</div>
-              <div style="font-size:12px;color:var(--text-muted)">
-                ${p.mesa ? `Mesa ${p.mesa}` : '📱 WhatsApp'} · ${p.canal}
-              </div>
-            </div>
-            <div style="text-align:right">
-              <div class="cocina-timer" style="color:${urgColor}">⏱️ ${p.minutos} min</div>
-              <div style="font-size:11px;color:var(--text-muted)">${BADGE[p.estado] || p.estado}</div>
-            </div>
-          </div>
+    const urgentes = pedidos.filter(p=>p.prioridad==='urgente').length;
+    document.getElementById('cnt-urgentes').textContent = urgentes;
+    document.getElementById('cnt-nuevos'  ).textContent = nuevos.length;
+    document.getElementById('cnt-prep'    ).textContent = prep.length;
+    document.getElementById('cnt-listos'  ).textContent = listos.length;
 
-          <div class="cocina-items">
-            ${p.items.map(i => `
-              <div class="cocina-item ${i.estado === 'listo' ? 'listo' : ''}" id="item-${p.id}-${i.id}">
-                <span style="font-size:22px">${i.emoji}</span>
-                <span class="cocina-item-qty">${i.cantidad}x</span>
-                <span style="flex:1">${i.nombre}</span>
-                ${i.notas ? `<span style="font-size:11px;color:var(--accent3);max-width:120px">📝 ${i.notas}</span>` : ''}
-                ${i.estado !== 'listo' ? `
-                  <button class="btn btn-success btn-sm"
-                    onclick="marcarItemListo(${p.id}, ${i.id})">✓</button>
-                ` : '<span style="color:var(--accent2);font-size:12px">✓ LISTO</span>'}
-              </div>
-            `).join('')}
-          </div>
+    const maxMin = pedidos.length ? Math.max(...pedidos.map(p=>p.minutos)) : 0;
+    document.getElementById('cnt-espera').textContent = pedidos.length ? `${maxMin} min` : '—';
 
-          ${p.notas ? `<div style="background:var(--surface2);border-radius:8px;padding:8px;font-size:13px;margin-bottom:12px">📝 ${p.notas}</div>` : ''}
-
-          <div style="display:flex;gap:8px">
-            <button class="btn btn-success btn-sm" style="flex:1"
-              onclick="cambiarEstado(${p.id}, 'en_preparacion')">
-              🔥 En Preparación
-            </button>
-            <button class="btn btn-primary btn-sm" style="flex:1"
-              onclick="cambiarEstado(${p.id}, 'listo')">
-              ✅ Todo Listo
-            </button>
-          </div>
-        </div>
-      `;
-    }).join('');
-
-    document.getElementById('cnt-verde').textContent = verde;
-    document.getElementById('cnt-amarillo').textContent = amarillo;
-    document.getElementById('cnt-rojo').textContent = rojo;
+    // Alerta sonora si hay urgentes nuevos
+    if (urgentes > 0) document.title = `🚨 ${urgentes} URGENTE — Cocina`;
+    else document.title = `👨‍🍳 Cocina (${pedidos.length})`;
 
   } catch (e) {
-    console.error('Error cargando cocina:', e);
+    console.error('Error cocina:', e);
   }
 }
 
-async function marcarItemListo(pedidoId, itemId) {
+async function marcarItem(pedidoId, itemId, btn) {
   try {
     const res = await API.put(`/pedidos/${pedidoId}/items/${itemId}/listo`);
+    btn.classList.add('done');
+    btn.parentElement.classList.add('listo');
+    btn.replaceWith(btn.cloneNode(true));
     if (res.todos_listos) {
-      toast('¡Pedido completamente listo! 🎉', 'success');
+      setTimeout(cargarCocina, 500);
     }
-    await cargarCocina();
-  } catch (e) {
-    toast(e.message, 'error');
-  }
+  } catch(e) { console.error(e); }
 }
 
 async function cambiarEstado(pedidoId, estado) {
   try {
     await API.put(`/pedidos/${pedidoId}/estado`, { estado });
-    if (estado === 'listo') toast('✅ Pedido marcado como listo', 'success');
     await cargarCocina();
-  } catch (e) {
-    toast(e.message, 'error');
-  }
+  } catch(e) { console.error(e); }
+}
+
+async function setPrioridad(pedidoId, nivel, btn) {
+  try {
+    await API.put(`/pedidos/${pedidoId}/prioridad`, { prioridad: nivel });
+    // Actualizar botones visualmente de inmediato
+    const card = document.getElementById('card-'+pedidoId);
+    card.querySelectorAll('.k-prio-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    // Actualizar badge y clases
+    await cargarCocina();
+  } catch(e) { console.error(e); }
 }
 
 function actualizarReloj() {

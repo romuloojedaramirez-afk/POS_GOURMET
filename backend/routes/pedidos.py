@@ -58,40 +58,63 @@ def listar_pedidos(
 
 @router.get("/cocina")
 def pedidos_cocina(db: Session = Depends(get_db)):
-    """Pedidos pendientes y en preparación para la pantalla de cocina."""
+    """Pedidos pendientes, en preparación y listos — agrupados para la pantalla de cocina."""
+    PRIO_ORDEN = {"urgente": 0, "alta": 1, "normal": 2}
+
     pedidos = db.query(Pedido).options(
         joinedload(Pedido.detalles).joinedload(DetallePedido.producto),
-        joinedload(Pedido.mesa)
+        joinedload(Pedido.mesa),
+        joinedload(Pedido.cliente)
     ).filter(
-        Pedido.estado.in_([EstadoPedido.pendiente, EstadoPedido.en_preparacion])
+        Pedido.estado.in_([EstadoPedido.pendiente, EstadoPedido.en_preparacion, EstadoPedido.listo])
     ).order_by(Pedido.created_at).all()
+
+    # Ordenar: primero por prioridad, luego por tiempo
+    pedidos.sort(key=lambda p: (PRIO_ORDEN.get(getattr(p, "prioridad", "normal"), 2), p.created_at))
 
     resultado = []
     for p in pedidos:
         minutos = int((datetime.utcnow() - p.created_at).total_seconds() / 60)
         urgencia = "verde" if minutos < 15 else ("amarillo" if minutos < 30 else "rojo")
         resultado.append({
-            "id": p.id,
+            "id":            p.id,
             "numero_ticket": p.numero_ticket,
-            "mesa": p.mesa.numero if p.mesa else None,
-            "canal": p.canal.value,
-            "estado": p.estado.value,
-            "minutos": minutos,
-            "urgencia": urgencia,
-            "notas": p.notas,
+            "mesa":          p.mesa.numero if p.mesa else None,
+            "cliente":       p.cliente.nombre if p.cliente else None,
+            "canal":         p.canal.value,
+            "estado":        p.estado.value,
+            "prioridad":     getattr(p, "prioridad", "normal") or "normal",
+            "minutos":       minutos,
+            "urgencia":      urgencia,
+            "total":         p.total,
+            "notas":         p.notas,
             "items": [
                 {
-                    "id": d.id,
-                    "nombre": d.producto.nombre if d.producto else "?",
-                    "emoji": d.producto.emoji if d.producto else "🍽️",
+                    "id":       d.id,
+                    "nombre":   d.producto.nombre if d.producto else "?",
+                    "emoji":    d.producto.emoji  if d.producto else "🍽️",
                     "cantidad": d.cantidad,
-                    "notas": d.notas,
-                    "estado": d.estado,
+                    "notas":    d.notas,
+                    "estado":   d.estado,
                 }
                 for d in p.detalles
             ]
         })
     return resultado
+
+
+@router.put("/{pedido_id}/prioridad")
+def cambiar_prioridad(pedido_id: int, body: dict, db: Session = Depends(get_db)):
+    """Cambia la prioridad de un pedido: normal / alta / urgente."""
+    p = db.query(Pedido).filter(Pedido.id == pedido_id).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Pedido no encontrado")
+    nivel = body.get("prioridad", "normal")
+    if nivel not in ("normal", "alta", "urgente"):
+        raise HTTPException(status_code=400, detail="prioridad debe ser normal|alta|urgente")
+    p.prioridad = nivel
+    db.commit()
+    return {"ok": True, "prioridad": nivel}
 
 
 @router.get("/{pedido_id}", response_model=PedidoOut)

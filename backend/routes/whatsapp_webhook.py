@@ -20,11 +20,12 @@ from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List
 from pydantic import BaseModel
+from datetime import datetime
 import json
 import os
 
 from ..database import get_db
-from ..models import ConversacionWhatsApp, Cliente, ConfigRestaurante
+from ..models import ConversacionWhatsApp, Cliente, ConfigRestaurante, MensajeProgramado
 from ..schemas import ConversacionOut
 from ..services.whatsapp_service import WhatsAppService
 
@@ -61,6 +62,23 @@ class MsgMasivo(BaseModel):
 
 class MsgMenuDia(BaseModel):
     pass  # usa config de la BD
+
+class MsgDirecto(BaseModel):
+    telefono: str
+    nombre:   str = "Cliente"
+    mensaje:  str
+    tipo:     str = "texto"   # texto | botones
+    botones:  list = []
+
+class MsgProgramado(BaseModel):
+    nombre:       str
+    tipo:         str = "texto"
+    mensaje:      str
+    botones:      list = []
+    hora:         str          # "11:30"
+    dias:         str = "lunes,martes,miercoles,jueves,viernes,sabado,domingo"
+    destinatarios:str = "todos"
+    activo:       bool = True
 
 
 # ── Fábrica del servicio ──────────────────────────────────────────────────────
@@ -332,3 +350,127 @@ def resetear_conversacion(conv_id: int, db: Session = Depends(get_db)):
     conv.activa            = False
     db.commit()
     return {"ok": True, "mensaje": "Conversación reseteada"}
+
+
+# ── ENVÍO DIRECTO A NÚMERO ESPECÍFICO ────────────────────────────────────────
+
+@router.post("/enviar-directo")
+async def enviar_directo(data: MsgDirecto, db: Session = Depends(get_db)):
+    """
+    Envía un mensaje directo a un número de WhatsApp.
+    El bot inicia la conversación (requiere template aprobado por Meta
+    para contacto frío; para clientes que ya escribieron antes,
+    funciona con texto normal).
+    """
+    svc = _wa_service(db)
+    if data.tipo == "botones" and data.botones:
+        res = await svc.enviar_botones(data.telefono, data.mensaje, data.botones)
+    else:
+        res = await svc.enviar_texto(data.telefono, data.mensaje)
+
+    # Registrar o actualizar conversación
+    conv = db.query(ConversacionWhatsApp).filter(
+        ConversacionWhatsApp.telefono == data.telefono
+    ).first()
+    if not conv:
+        conv = ConversacionWhatsApp(
+            telefono=data.telefono,
+            nombre=data.nombre,
+            estado_flujo="inicio",
+            activa=True
+        )
+        db.add(conv)
+    else:
+        conv.nombre   = data.nombre or conv.nombre
+        conv.activa   = True
+        conv.updated_at = datetime.utcnow()
+    db.commit()
+    return {"ok": True, "resultado": res}
+
+
+# ── MENSAJES PROGRAMADOS ──────────────────────────────────────────────────────
+
+@router.get("/programados")
+def listar_programados(db: Session = Depends(get_db)):
+    """Lista todos los mensajes programados."""
+    msgs = db.query(MensajeProgramado).order_by(MensajeProgramado.hora).all()
+    return [
+        {
+            "id":           m.id,
+            "nombre":       m.nombre,
+            "tipo":         m.tipo,
+            "mensaje":      m.mensaje,
+            "botones":      json.loads(m.botones_json or "[]"),
+            "hora":         m.hora,
+            "dias":         m.dias,
+            "activo":       m.activo,
+            "destinatarios":m.destinatarios,
+            "ultimo_envio": m.ultimo_envio.isoformat() if m.ultimo_envio else None,
+        }
+        for m in msgs
+    ]
+
+
+@router.post("/programados")
+def crear_programado(data: MsgProgramado, db: Session = Depends(get_db)):
+    """Crea un nuevo mensaje programado."""
+    m = MensajeProgramado(
+        nombre       = data.nombre,
+        tipo         = data.tipo,
+        mensaje      = data.mensaje,
+        botones_json = json.dumps(data.botones, ensure_ascii=False),
+        hora         = data.hora,
+        dias         = data.dias,
+        activo       = data.activo,
+        destinatarios= data.destinatarios,
+    )
+    db.add(m)
+    db.commit()
+    db.refresh(m)
+    return {"ok": True, "id": m.id}
+
+
+@router.put("/programados/{msg_id}")
+def actualizar_programado(msg_id: int, data: MsgProgramado, db: Session = Depends(get_db)):
+    """Actualiza un mensaje programado."""
+    m = db.query(MensajeProgramado).filter(MensajeProgramado.id == msg_id).first()
+    if not m:
+        raise HTTPException(status_code=404, detail="Mensaje no encontrado")
+    m.nombre        = data.nombre
+    m.tipo          = data.tipo
+    m.mensaje       = data.mensaje
+    m.botones_json  = json.dumps(data.botones, ensure_ascii=False)
+    m.hora          = data.hora
+    m.dias          = data.dias
+    m.activo        = data.activo
+    m.destinatarios = data.destinatarios
+    db.commit()
+    return {"ok": True}
+
+
+@router.delete("/programados/{msg_id}")
+def eliminar_programado(msg_id: int, db: Session = Depends(get_db)):
+    """Elimina un mensaje programado."""
+    m = db.query(MensajeProgramado).filter(MensajeProgramado.id == msg_id).first()
+    if not m:
+        raise HTTPException(status_code=404, detail="Mensaje no encontrado")
+    db.delete(m)
+    db.commit()
+    return {"ok": True}
+
+
+@router.post("/programados/{msg_id}/enviar-ahora")
+async def enviar_programado_ahora(msg_id: int, db: Session = Depends(get_db)):
+    """Envía un mensaje programado inmediatamente (prueba o envío manual)."""
+    m = db.query(MensajeProgramado).filter(MensajeProgramado.id == msg_id).first()
+    if not m:
+        raise HTTPException(status_code=404, detail="Mensaje no encontrado")
+    svc     = _wa_service(db)
+    botones = json.loads(m.botones_json or "[]")
+    if m.tipo == "botones" and botones:
+        resultado = await svc.envio_masivo_botones(m.mensaje, botones)
+    else:
+        resultado = await svc.envio_masivo_texto(m.mensaje)
+    m.ultimo_envio = datetime.utcnow()
+    db.commit()
+    return {"ok": True, **resultado}
