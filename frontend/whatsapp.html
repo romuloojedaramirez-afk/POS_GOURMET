@@ -721,14 +721,11 @@ async function cargarConversaciones() {
     renderConvList(convs);
     document.getElementById('conv-count').textContent = convs.length;
     document.getElementById('h-convs').textContent   = convs.length;
-  } catch {}
-  try {
-    const peds = await API.get('/pedidos/');
-    const hoy  = new Date().toDateString();
-    const hp   = peds.filter(p=>new Date(p.created_at).toDateString()===hoy);
-    document.getElementById('h-peds').textContent   = hp.length;
-    document.getElementById('h-ventas').textContent = 'S/'+hp.reduce((s,p)=>s+p.total,0).toFixed(0);
-  } catch {}
+    // Calcular pedidos desde las conversaciones (sin llamar a /pedidos/)
+    const enviados = convs.filter(c => c.estado_flujo === 'pedido_enviado' ||
+                                       c.estado_flujo === 'inicio' && c.ultimo_mensaje).length;
+    document.getElementById('h-peds').textContent = enviados;
+  } catch(e) { console.error('WA convs:', e); }
 }
 
 function renderConvList(convs) {
@@ -884,7 +881,7 @@ async function resetConvActiva() {
 document.addEventListener('DOMContentLoaded',()=>{
   renderPrompts();
   cargarConversaciones();
-  setInterval(cargarConversaciones,15000);
+  setInterval(cargarConversaciones, 30000);
 });
 </script>
 </body>
