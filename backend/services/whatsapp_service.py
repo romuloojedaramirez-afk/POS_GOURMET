@@ -1,6 +1,18 @@
 """
-Servicio WhatsApp Business Cloud API.
-Maneja el flujo completo: bienvenida → menú → producto → pago → cocina.
+WhatsApp Business Cloud API — Motor de Mensajes Interactivos.
+
+TIPOS DE MENSAJES SOPORTADOS:
+  1. Texto plano
+  2. Imagen con caption
+  3. Botones interactivos (máx 3)
+  4. Lista de opciones (máx 10 por sección)
+  5. Template de proactivo
+  6. Ubicación
+
+FUENTE DE DATOS:
+  - Menú       → tablas Categoria + Producto (DB)
+  - Contactos  → tabla Cliente + ConversacionWhatsApp (DB)
+  - Config     → tabla ConfigRestaurante (DB)
 """
 import httpx
 import json
@@ -13,154 +25,407 @@ from ..models import (
 )
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+#   BUILDERS — Constructores de payload JSON para la API de Meta
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _build_text(to: str, body: str) -> dict:
+    """Mensaje de texto plano."""
+    return {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": to,
+        "type": "text",
+        "text": {"preview_url": False, "body": body}
+    }
+
+
+def _build_image(to: str, image_url: str, caption: str = "") -> dict:
+    """Mensaje con imagen y caption. image_url debe ser https:// público."""
+    return {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": to,
+        "type": "image",
+        "image": {"link": image_url, "caption": caption}
+    }
+
+
+def _build_buttons(to: str, body: str, buttons: list, header: str = None, footer: str = None) -> dict:
+    """
+    Botones interactivos — máximo 3 botones.
+    buttons = [{"id": "btn_id", "title": "Texto"}, ...]
+    """
+    interactive: dict = {
+        "type": "button",
+        "body": {"text": body},
+        "action": {
+            "buttons": [
+                {"type": "reply", "reply": {"id": b["id"], "title": b["title"][:20]}}
+                for b in buttons[:3]
+            ]
+        }
+    }
+    if header:
+        interactive["header"] = {"type": "text", "text": header}
+    if footer:
+        interactive["footer"] = {"text": footer}
+    return {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": to,
+        "type": "interactive",
+        "interactive": interactive
+    }
+
+
+def _build_list(to: str, body: str, button_label: str, sections: list,
+                header: str = None, footer: str = None) -> dict:
+    """
+    Mensaje tipo lista — hasta 10 filas por sección, múltiples secciones.
+    sections = [{"title": "...", "rows": [{"id":"..","title":"..","description":".."}]}]
+    """
+    interactive: dict = {
+        "type": "list",
+        "body": {"text": body},
+        "action": {"button": button_label[:20], "sections": sections}
+    }
+    if header:
+        interactive["header"] = {"type": "text", "text": header}
+    if footer:
+        interactive["footer"] = {"text": footer}
+    return {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": to,
+        "type": "interactive",
+        "interactive": interactive
+    }
+
+
+def _build_template(to: str, template_name: str, lang: str = "es",
+                    components: list = None) -> dict:
+    """
+    Mensaje de plantilla (template) — para mensajes proactivos pre-aprobados.
+    Requiere aprobación previa en Meta Business Manager.
+    """
+    payload: dict = {
+        "messaging_product": "whatsapp",
+        "to": to,
+        "type": "template",
+        "template": {
+            "name": template_name,
+            "language": {"code": lang}
+        }
+    }
+    if components:
+        payload["template"]["components"] = components
+    return payload
+
+
+def _build_location(to: str, lat: float, lon: float, name: str, address: str) -> dict:
+    """Envía la ubicación del restaurante."""
+    return {
+        "messaging_product": "whatsapp",
+        "to": to,
+        "type": "location",
+        "location": {"latitude": lat, "longitude": lon, "name": name, "address": address}
+    }
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#   WHATSAPP SERVICE
+# ══════════════════════════════════════════════════════════════════════════════
+
 class WhatsAppService:
 
-    BASE_URL = "https://graph.facebook.com/v19.0"
+    META_URL = "https://graph.facebook.com/v19.0"
 
     def __init__(self, token: str, phone_id: str, db: Session):
-        self.token = token
+        self.token    = token
         self.phone_id = phone_id
-        self.db = db
-        self._config_cache = {}
+        self.db       = db
+        self._cfg_cache: dict = {}
 
-    def _cfg(self, clave: str, default: str = "") -> str:
-        if clave not in self._config_cache:
+    # ── CONFIG desde DB ────────────────────────────────────────────────────────
+
+    def cfg(self, clave: str, default: str = "") -> str:
+        if clave not in self._cfg_cache:
             row = self.db.query(ConfigRestaurante).filter(
                 ConfigRestaurante.clave == clave
             ).first()
-            self._config_cache[clave] = row.valor if row else default
-        return self._config_cache[clave]
+            self._cfg_cache[clave] = row.valor if row else default
+        return self._cfg_cache[clave]
 
-    async def enviar_texto(self, telefono: str, texto: str) -> dict:
-        payload = {
-            "messaging_product": "whatsapp",
-            "to": telefono,
-            "type": "text",
-            "text": {"body": texto}
-        }
-        return await self._post(payload)
+    # ── ENVÍO HTTP a Meta Graph API ────────────────────────────────────────────
 
-    async def enviar_botones(self, telefono: str, cuerpo: str, botones: list) -> dict:
-        """Envía mensaje con botones interactivos (máx 3)."""
-        payload = {
-            "messaging_product": "whatsapp",
-            "to": telefono,
-            "type": "interactive",
-            "interactive": {
-                "type": "button",
-                "body": {"text": cuerpo},
-                "action": {
-                    "buttons": [
-                        {"type": "reply", "reply": {"id": b["id"], "title": b["titulo"][:20]}}
-                        for b in botones[:3]
-                    ]
-                }
-            }
-        }
-        return await self._post(payload)
-
-    async def enviar_lista(self, telefono: str, cuerpo: str, boton: str, secciones: list) -> dict:
-        """Envía mensaje con lista de opciones."""
-        payload = {
-            "messaging_product": "whatsapp",
-            "to": telefono,
-            "type": "interactive",
-            "interactive": {
-                "type": "list",
-                "body": {"text": cuerpo},
-                "action": {
-                    "button": boton,
-                    "sections": secciones
-                }
-            }
-        }
-        return await self._post(payload)
-
-    async def _post(self, payload: dict) -> dict:
+    async def _send(self, payload: dict) -> dict:
+        """Envía el payload a la API de Meta. En modo simulación solo lo imprime."""
         if not self.token or not self.phone_id:
-            print(f"[WA-SIM] → {payload}")
-            return {"simulated": True}
-        url = f"{self.BASE_URL}/{self.phone_id}/messages"
-        async with httpx.AsyncClient() as client:
-            r = await client.post(
+            tipo = payload.get("type", "?")
+            dest = payload.get("to", "?")
+            print(f"[WA-SIM] tipo={tipo} → {dest}")
+            return {"simulated": True, "tipo": tipo}
+
+        url = f"{self.META_URL}/{self.phone_id}/messages"
+        async with httpx.AsyncClient(timeout=12) as client:
+            resp = await client.post(
                 url,
                 json=payload,
-                headers={"Authorization": f"Bearer {self.token}"},
-                timeout=10,
+                headers={
+                    "Authorization": f"Bearer {self.token}",
+                    "Content-Type": "application/json"
+                }
             )
-            return r.json()
+            return resp.json()
 
-    # ── FLUJO PRINCIPAL ───────────────────────────────────────────────────────
+    # ── MÉTODOS PÚBLICOS DE ENVÍO ──────────────────────────────────────────────
+
+    async def enviar_texto(self, to: str, body: str) -> dict:
+        return await self._send(_build_text(to, body))
+
+    async def enviar_imagen(self, to: str, image_url: str, caption: str = "") -> dict:
+        return await self._send(_build_image(to, image_url, caption))
+
+    async def enviar_botones(self, to: str, body: str, buttons: list,
+                              header: str = None, footer: str = None) -> dict:
+        return await self._send(_build_buttons(to, body, buttons, header, footer))
+
+    async def enviar_lista(self, to: str, body: str, button_label: str,
+                            sections: list, header: str = None, footer: str = None) -> dict:
+        return await self._send(_build_list(to, body, button_label, sections, header, footer))
+
+    async def enviar_template(self, to: str, template_name: str,
+                               lang: str = "es", components: list = None) -> dict:
+        return await self._send(_build_template(to, template_name, lang, components))
+
+    async def enviar_ubicacion(self, to: str) -> dict:
+        lat  = float(self.cfg("lat",  "-12.0464"))
+        lon  = float(self.cfg("lon",  "-77.0428"))
+        name = self.cfg("nombre", "GourmetPOS")
+        addr = self.cfg("direccion", "Lima, Perú")
+        return await self._send(_build_location(to, lat, lon, name, addr))
+
+    # ── CARGA DEL MENÚ DESDE LA BASE DE DATOS ─────────────────────────────────
+
+    def cargar_menu(self) -> dict:
+        """
+        Lee Categoria + Producto de la BD y devuelve un dict estructurado:
+        {
+          cat_id: {
+            "nombre": str, "emoji": str,
+            "productos": [{"id", "nombre", "precio", "emoji", "descripcion", "imagen_url"}]
+          }
+        }
+        Este dict es la FUENTE de datos de todos los mensajes interactivos del bot.
+        """
+        menu: dict = {}
+        cats = self.db.query(Categoria).filter(Categoria.activo == True).order_by(Categoria.orden).all()
+        for cat in cats:
+            prods = self.db.query(Producto).filter(
+                Producto.categoria_id == cat.id,
+                Producto.disponible == True
+            ).order_by(Producto.precio).all()
+            menu[cat.id] = {
+                "nombre":    cat.nombre,
+                "emoji":     cat.emoji or "🍽️",
+                "productos": [
+                    {
+                        "id":          p.id,
+                        "nombre":      p.nombre,
+                        "precio":      p.precio,
+                        "emoji":       p.emoji or "🍽️",
+                        "descripcion": p.descripcion or "",
+                        "imagen_url":  getattr(p, "imagen_url", None) or "",
+                        "tiempo_prep": getattr(p, "tiempo_prep", 15) or 15,
+                    }
+                    for p in prods
+                ]
+            }
+        return menu
+
+    def cargar_contactos(self) -> list:
+        """
+        Carga todos los números de teléfono de la BD (tabla Cliente).
+        Combina con ConversacionWhatsApp para tener nombre + teléfono.
+        Devuelve: [{"telefono": str, "nombre": str, "pedidos": int}]
+        """
+        clientes = self.db.query(Cliente).filter(
+            Cliente.telefono.isnot(None),
+            Cliente.telefono != ""
+        ).all()
+        convs = {
+            c.telefono: c.nombre
+            for c in self.db.query(ConversacionWhatsApp).all()
+        }
+        resultado = []
+        telefonos_vistos = set()
+        for c in clientes:
+            if c.telefono and c.telefono not in telefonos_vistos:
+                telefonos_vistos.add(c.telefono)
+                resultado.append({
+                    "telefono": c.telefono,
+                    "nombre":   c.nombre or convs.get(c.telefono, "Cliente"),
+                    "pedidos":  c.total_pedidos or 0,
+                })
+        # Agregar los que solo tienen conversación (sin cliente aún)
+        for tel, nom in convs.items():
+            if tel not in telefonos_vistos:
+                resultado.append({"telefono": tel, "nombre": nom, "pedidos": 0})
+        return resultado
+
+    # ── ENVÍO MASIVO ───────────────────────────────────────────────────────────
+
+    async def envio_masivo_texto(self, mensaje: str) -> dict:
+        """Envía texto a todos los contactos de la BD."""
+        contactos = self.cargar_contactos()
+        ok, error = 0, 0
+        for c in contactos:
+            try:
+                await self.enviar_texto(c["telefono"], mensaje)
+                ok += 1
+            except Exception:
+                error += 1
+        return {"total": len(contactos), "enviados": ok, "errores": error}
+
+    async def envio_masivo_botones(self, body: str, buttons: list) -> dict:
+        """Envía mensaje con botones a todos los contactos."""
+        contactos = self.cargar_contactos()
+        ok, error = 0, 0
+        for c in contactos:
+            try:
+                await self.enviar_botones(c["telefono"], body, buttons)
+                ok += 1
+            except Exception:
+                error += 1
+        return {"total": len(contactos), "enviados": ok, "errores": error}
+
+    async def envio_menu_del_dia(self) -> dict:
+        """
+        Envío masivo del menú del día:
+        1. Imagen del restaurante (si hay URL configurada)
+        2. Botones para ver el menú
+        """
+        nombre_rest = self.cfg("nombre", "Tu Restaurante")
+        imagen_url  = self.cfg("imagen_menu_url", "")
+        contactos   = self.cargar_contactos()
+        ok, error = 0, 0
+
+        for c in contactos:
+            try:
+                tel = c["telefono"]
+                nom = c["nombre"]
+
+                if imagen_url:
+                    await self.enviar_imagen(
+                        tel, imagen_url,
+                        f"🍽️ *{nombre_rest}*\n¡Hola {nom}! Tenemos el menú del día para ti."
+                    )
+
+                await self.enviar_botones(
+                    tel,
+                    f"👋 ¡Hola {nom}! Hoy tenemos platos especiales.\n¿Qué deseas pedir?",
+                    [
+                        {"id": "ver_menu",    "title": "🍽️ Ver Menú"},
+                        {"id": "mis_pedidos", "title": "📦 Mis Pedidos"},
+                        {"id": "ubicacion",   "title": "📍 Ubicación"},
+                    ]
+                )
+                ok += 1
+            except Exception:
+                error += 1
+
+        return {"total": len(contactos), "enviados": ok, "errores": error}
+
+    # ══════════════════════════════════════════════════════════════════════════
+    #   FLUJO DE PEDIDO — Pipeline Johnson
+    # ══════════════════════════════════════════════════════════════════════════
 
     async def procesar_mensaje(self, telefono: str, mensaje: str, nombre: str):
-        conv = self._obtener_conv(telefono, nombre)
+        conv  = self._get_or_create_conv(telefono, nombre)
         datos = json.loads(conv.datos_pedido_json or "{}")
-        msg = mensaje.strip().lower()
+        msg   = mensaje.strip().lower()
 
-        handler = {
-            "inicio": self._flujo_inicio,
-            "menu_categorias": self._flujo_categorias,
-            "menu_productos": self._flujo_productos,
-            "detalle_producto": self._flujo_detalle_producto,
-            "agregar_complemento": self._flujo_complementos,
-            "confirmar_pedido": self._flujo_confirmacion,
-            "seleccionar_pago": self._flujo_pago,
-            "pedido_enviado": self._flujo_post_pago,
-        }.get(conv.estado_flujo, self._flujo_inicio)
+        # Comandos globales (siempre disponibles)
+        if msg in ["hola", "inicio", "start", "/start", "menu", "menú", "reiniciar"]:
+            nuevo_estado, nuevos_datos = await self._paso_bienvenida(telefono, datos)
+        elif msg == "ubicacion":
+            await self.enviar_ubicacion(telefono)
+            nuevo_estado, nuevos_datos = conv.estado_flujo, datos
+        else:
+            handler = {
+                "inicio":              self._paso_bienvenida,
+                "menu_categorias":     self._paso_categorias,
+                "menu_productos":      self._paso_productos,
+                "detalle_producto":    self._paso_detalle,
+                "agregar_complemento": self._paso_complementos,
+                "confirmar_pedido":    self._paso_confirmacion,
+                "seleccionar_pago":    self._paso_pago,
+                "pedido_enviado":      self._paso_post_pago,
+            }.get(conv.estado_flujo, self._paso_bienvenida)
+            nuevo_estado, nuevos_datos = await handler(telefono, msg, datos)
 
-        nuevo_estado, nuevos_datos = await handler(telefono, msg, datos)
-
-        conv.estado_flujo = nuevo_estado
+        conv.estado_flujo      = nuevo_estado
         conv.datos_pedido_json = json.dumps(nuevos_datos, ensure_ascii=False)
-        conv.ultimo_mensaje = mensaje
-        conv.updated_at = datetime.utcnow()
+        conv.ultimo_mensaje    = mensaje
+        conv.updated_at        = datetime.utcnow()
+        conv.activa            = True
         self.db.commit()
 
-    # ── ESTADOS DEL FLUJO ─────────────────────────────────────────────────────
+    # ── PASO 1: BIENVENIDA ────────────────────────────────────────────────────
 
-    async def _flujo_inicio(self, tel: str, msg: str, datos: dict):
-        nombre_rest = self._cfg("nombre", "GourmetPOS")
+    async def _paso_bienvenida(self, tel: str, datos: dict):
+        nombre_rest = self.cfg("nombre", "Tu Restaurante")
         await self.enviar_botones(
             tel,
-            f"¡Hola! 👋 Bienvenido a *{nombre_rest}* 🍽️\n\n"
-            "¿Qué deseas hacer hoy?",
+            f"¡Hola! 😊 Bienvenido a *{nombre_rest}* 🍽️\n\n"
+            "El cliente solo toca la pantalla.\n¿Qué deseas hacer?",
             [
-                {"id": "ver_menu", "titulo": "📋 Ver Menú"},
-                {"id": "mis_pedidos", "titulo": "📦 Mis Pedidos"},
-                {"id": "contactar", "titulo": "📞 Contactar"},
-            ]
+                {"id": "ver_menu",    "title": "🍽️ Ver Menú"},
+                {"id": "mis_pedidos", "title": "📦 Mis Pedidos"},
+                {"id": "ubicacion",   "title": "📍 Ubicación"},
+            ],
+            header="PEDIDOS SIN ESCRIBIR"
         )
         return "menu_categorias", {}
 
-    async def _flujo_categorias(self, tel: str, msg: str, datos: dict):
-        if msg in ["hola", "inicio", "menu", "menú", "start", "/start"]:
-            return await self._flujo_inicio(tel, msg, datos)
+    # ── PASO 2: CATEGORÍAS DEL MENÚ ───────────────────────────────────────────
 
-        categorias = self.db.query(Categoria).filter(Categoria.activo == True).order_by(Categoria.orden).all()
+    async def _paso_categorias(self, tel: str, msg: str, datos: dict):
+        if msg == "mis_pedidos":
+            return await self._mostrar_mis_pedidos(tel, datos)
 
-        if not categorias:
-            await self.enviar_texto(tel, "❌ No hay categorías disponibles en este momento.")
+        menu = self.cargar_menu()
+        if not menu:
+            await self.enviar_texto(tel, "😔 El menú no está disponible en este momento. Intenta más tarde.")
             return "inicio", {}
 
-        secciones = [{
-            "title": "Categorías del Menú",
-            "rows": [
-                {"id": f"cat_{c.id}", "title": f"{c.emoji} {c.nombre}"[:24]}
-                for c in categorias
-            ]
-        }]
+        # Construir secciones de lista desde la BD
+        rows = [
+            {
+                "id":          f"cat_{cat_id}",
+                "title":       f"{info['emoji']} {info['nombre']}"[:24],
+                "description": f"{len(info['productos'])} opciones disponibles"[:72]
+            }
+            for cat_id, info in menu.items()
+            if info["productos"]
+        ]
 
         await self.enviar_lista(
             tel,
-            "🍽️ *Nuestro Menú*\nSelecciona una categoría para ver los platos:",
+            "🍽️ *Nuestro Menú Completo*\n\nSelecciona una categoría para ver los platos disponibles:",
             "Ver Categorías",
-            secciones
+            [{"title": "Categorías", "rows": rows[:10]}],
+            header=self.cfg("nombre", "Tu Restaurante"),
+            footer="Toca una opción para continuar 👆"
         )
-        return "menu_productos", datos
+        return "menu_productos", {**datos, "_menu_cache": True}
 
-    async def _flujo_productos(self, tel: str, msg: str, datos: dict):
+    # ── PASO 3: PRODUCTOS DE CATEGORÍA ───────────────────────────────────────
+
+    async def _paso_productos(self, tel: str, msg: str, datos: dict):
         if not msg.startswith("cat_"):
-            await self.enviar_texto(tel, "Por favor selecciona una categoría del menú 👆")
+            await self.enviar_texto(tel, "👆 Por favor selecciona una categoría del menú.")
             return "menu_productos", datos
 
         try:
@@ -168,34 +433,44 @@ class WhatsAppService:
         except ValueError:
             return "menu_categorias", datos
 
-        productos = self.db.query(Producto).filter(
-            Producto.categoria_id == cat_id,
-            Producto.disponible == True
-        ).all()
-
-        if not productos:
+        menu = self.cargar_menu()
+        cat  = menu.get(cat_id)
+        if not cat or not cat["productos"]:
             await self.enviar_texto(tel, "😔 No hay productos disponibles en esta categoría.")
             return "menu_categorias", datos
 
-        secciones = [{
-            "title": "Selecciona un plato",
-            "rows": [
-                {
-                    "id": f"prod_{p.id}",
-                    "title": f"{p.emoji} {p.nombre}"[:24],
-                    "description": f"S/ {p.precio:.2f}"[:72]
-                }
-                for p in productos
-            ]
-        }]
+        moneda = self.cfg("moneda", "S/")
 
-        await self.enviar_lista(tel, "Elige tu plato:", "Ver Platos", secciones)
+        # Si la categoría tiene imagen configurada, enviarla primero
+        img_cat = self.cfg(f"img_cat_{cat_id}", "")
+        if img_cat:
+            await self.enviar_imagen(tel, img_cat, f"{cat['emoji']} *{cat['nombre']}*")
+
+        # Lista de productos (máx 10 por sección de WA)
+        rows = [
+            {
+                "id":          f"prod_{p['id']}",
+                "title":       f"{p['emoji']} {p['nombre']}"[:24],
+                "description": f"{moneda} {p['precio']:.2f} · ⏱️ {p['tiempo_prep']} min"[:72]
+            }
+            for p in cat["productos"][:10]
+        ]
+
+        await self.enviar_lista(
+            tel,
+            f"{cat['emoji']} *{cat['nombre']}*\n\nElige tu plato:",
+            "Ver Platos",
+            [{"title": cat["nombre"], "rows": rows}],
+            footer="↩ Escribe 'menú' para volver"
+        )
         datos["cat_id"] = cat_id
         return "detalle_producto", datos
 
-    async def _flujo_detalle_producto(self, tel: str, msg: str, datos: dict):
+    # ── PASO 4: DETALLE DEL PRODUCTO ──────────────────────────────────────────
+
+    async def _paso_detalle(self, tel: str, msg: str, datos: dict):
         if not msg.startswith("prod_"):
-            await self.enviar_texto(tel, "Por favor selecciona un producto 👆")
+            await self.enviar_texto(tel, "👆 Por favor selecciona un plato de la lista.")
             return "detalle_producto", datos
 
         try:
@@ -208,98 +483,129 @@ class WhatsAppService:
             await self.enviar_texto(tel, "❌ Producto no disponible.")
             return "menu_categorias", datos
 
-        moneda = self._cfg("moneda", "S/")
-        texto = (
-            f"{prod.emoji} *{prod.nombre}*\n"
-            f"_{prod.descripcion}_\n\n"
-            f"💰 *{moneda} {prod.precio:.2f}*\n"
-            f"⏱️ Tiempo de preparación: ~{prod.tiempo_prep} min\n\n"
-            "¿Cuántas unidades deseas?"
+        moneda = self.cfg("moneda", "S/")
+
+        # Si el producto tiene imagen, enviarla primero
+        img_url = getattr(prod, "imagen_url", None) or ""
+        caption = (
+            f"🍽️ *{prod.nombre}*\n"
+            f"_{prod.descripcion}_\n"
+            f"💰 *{moneda} {prod.precio:.2f}* · ⏱️ {getattr(prod,'tiempo_prep',15)} min"
         )
+        if img_url:
+            await self.enviar_imagen(tel, img_url, caption)
+
         await self.enviar_botones(
-            tel, texto,
+            tel,
+            f"{'🖼️' if not img_url else ''}{caption if not img_url else ''}\n\n"
+            "¿Cuántas unidades deseas?",
             [
-                {"id": f"qty_1_{prod_id}", "titulo": "1️⃣ Una"},
-                {"id": f"qty_2_{prod_id}", "titulo": "2️⃣ Dos"},
-                {"id": f"qty_3_{prod_id}", "titulo": "3️⃣ Tres"},
-            ]
+                {"id": f"qty_1_{prod_id}", "title": "1️⃣ Una"},
+                {"id": f"qty_2_{prod_id}", "title": "2️⃣ Dos"},
+                {"id": f"qty_3_{prod_id}", "title": "3️⃣ Tres"},
+            ],
+            footer="Escribe 4, 5... para más unidades"
         )
         datos["prod_seleccionado"] = prod_id
         return "agregar_complemento", datos
 
-    async def _flujo_complementos(self, tel: str, msg: str, datos: dict):
+    # ── PASO 5: COMPLEMENTOS (BEBIDAS) ────────────────────────────────────────
+
+    async def _paso_complementos(self, tel: str, msg: str, datos: dict):
+        # Procesar cantidad seleccionada
         if msg.startswith("qty_"):
             partes = msg.split("_")
             if len(partes) >= 3:
                 cantidad = int(partes[1])
-                prod_id = int(partes[2])
+                prod_id  = int(partes[2])
                 prod = self.db.query(Producto).filter(Producto.id == prod_id).first()
-
+                if prod:
+                    carrito = datos.get("carrito", [])
+                    carrito.append({
+                        "prod_id":  prod.id,
+                        "nombre":   prod.nombre,
+                        "precio":   prod.precio,
+                        "cantidad": cantidad,
+                        "subtotal": round(prod.precio * cantidad, 2),
+                        "emoji":    prod.emoji or "🍽️",
+                    })
+                    datos["carrito"] = carrito
+        elif msg.isdigit() and datos.get("prod_seleccionado"):
+            cantidad = max(1, min(int(msg), 20))
+            prod_id  = datos["prod_seleccionado"]
+            prod = self.db.query(Producto).filter(Producto.id == prod_id).first()
+            if prod:
                 carrito = datos.get("carrito", [])
                 carrito.append({
-                    "prod_id": prod_id,
-                    "nombre": prod.nombre if prod else "Producto",
-                    "precio": prod.precio if prod else 0,
+                    "prod_id":  prod.id,
+                    "nombre":   prod.nombre,
+                    "precio":   prod.precio,
                     "cantidad": cantidad,
-                    "subtotal": round((prod.precio if prod else 0) * cantidad, 2),
-                    "emoji": prod.emoji if prod else "🍽️",
+                    "subtotal": round(prod.precio * cantidad, 2),
+                    "emoji":    prod.emoji or "🍽️",
                 })
                 datos["carrito"] = carrito
 
+        # Cargar bebidas desde la BD
         bebidas = self.db.query(Producto).join(Categoria).filter(
             Categoria.nombre.ilike("%bebida%"),
             Producto.disponible == True
-        ).limit(3).all()
+        ).limit(8).all()
+
+        moneda = self.cfg("moneda", "S/")
 
         if bebidas:
-            secciones = [{
-                "title": "Bebidas",
-                "rows": [
-                    {
-                        "id": f"beb_{b.id}",
-                        "title": f"{b.emoji} {b.nombre}"[:24],
-                        "description": f"S/ {b.precio:.2f}"[:72]
-                    }
-                    for b in bebidas
-                ]
-            }]
+            rows = [
+                {
+                    "id":          f"beb_{b.id}",
+                    "title":       f"{b.emoji} {b.nombre}"[:24],
+                    "description": f"{moneda} {b.precio:.2f}"[:72]
+                }
+                for b in bebidas
+            ]
             await self.enviar_lista(
                 tel,
-                "🥤 ¿Deseas agregar una bebida?",
+                "🥤 *¿Deseas agregar una bebida?*\n\nSelecciona o escribe 'no' para continuar:",
                 "Agregar Bebida",
-                secciones
+                [{"title": "Bebidas Disponibles", "rows": rows}]
             )
             await self.enviar_botones(
-                tel, "O bien continúa con tu pedido:",
-                [{"id": "no_bebida", "titulo": "✅ Sin bebida"}, {"id": "ver_menu", "titulo": "➕ Agregar más"}]
+                tel,
+                "O continúa sin bebida:",
+                [
+                    {"id": "no_bebida", "title": "✅ Sin bebida"},
+                    {"id": "ver_menu",  "title": "➕ Agregar más"},
+                ]
             )
         else:
             await self._mostrar_resumen(tel, datos)
-            return "confirmar_pedido", datos
+            return "seleccionar_pago", datos
 
         return "confirmar_pedido", datos
 
-    async def _flujo_confirmacion(self, tel: str, msg: str, datos: dict):
+    # ── PASO 6: CONFIRMACIÓN / RESUMEN ───────────────────────────────────────
+
+    async def _paso_confirmacion(self, tel: str, msg: str, datos: dict):
         if msg.startswith("beb_"):
             try:
                 beb_id = int(msg.replace("beb_", ""))
-                beb = self.db.query(Producto).filter(Producto.id == beb_id).first()
+                beb    = self.db.query(Producto).filter(Producto.id == beb_id).first()
                 if beb:
                     carrito = datos.get("carrito", [])
                     carrito.append({
-                        "prod_id": beb.id,
-                        "nombre": beb.nombre,
-                        "precio": beb.precio,
+                        "prod_id":  beb.id,
+                        "nombre":   beb.nombre,
+                        "precio":   beb.precio,
                         "cantidad": 1,
                         "subtotal": beb.precio,
-                        "emoji": beb.emoji,
+                        "emoji":    beb.emoji or "🥤",
                     })
                     datos["carrito"] = carrito
             except ValueError:
                 pass
 
         if msg == "ver_menu":
-            return await self._flujo_categorias(tel, msg, datos)
+            return await self._paso_categorias(tel, msg, datos)
 
         await self._mostrar_resumen(tel, datos)
         return "seleccionar_pago", datos
@@ -307,137 +613,180 @@ class WhatsAppService:
     async def _mostrar_resumen(self, tel: str, datos: dict):
         carrito = datos.get("carrito", [])
         if not carrito:
-            await self.enviar_texto(tel, "🛒 Tu carrito está vacío. Selecciona un producto del menú.")
+            await self.enviar_texto(tel, "🛒 Tu carrito está vacío. Escribe 'menú' para ver las opciones.")
             return
 
-        moneda = self._cfg("moneda", "S/")
-        igv_rate = float(self._cfg("igv", "0.18"))
-        subtotal = sum(i["subtotal"] for i in carrito)
-        igv = round(subtotal * igv_rate, 2)
-        total = round(subtotal + igv, 2)
+        moneda    = self.cfg("moneda", "S/")
+        igv_rate  = float(self.cfg("igv", "0.18"))
+        subtotal  = sum(i["subtotal"] for i in carrito)
+        igv       = round(subtotal * igv_rate, 2)
+        total     = round(subtotal + igv, 2)
 
-        lineas = [f"{i['emoji']} {i['nombre']} x{i['cantidad']} = {moneda} {i['subtotal']:.2f}" for i in carrito]
-        resumen = "\n".join(lineas)
-
-        datos["subtotal"] = subtotal
-        datos["igv"] = igv
-        datos["total"] = total
+        lineas = "\n".join(
+            f"  {i['emoji']} {i['nombre']} x{i['cantidad']} = {moneda} {i['subtotal']:.2f}"
+            for i in carrito
+        )
+        datos.update({"subtotal": subtotal, "igv": igv, "total": total})
 
         await self.enviar_botones(
             tel,
-            f"🧾 *Resumen de tu Pedido*\n\n{resumen}\n\n"
-            f"Subtotal: {moneda} {subtotal:.2f}\n"
+            f"🧾 *Resumen de tu Pedido*\n\n{lineas}\n\n"
+            f"Subtotal:  {moneda} {subtotal:.2f}\n"
             f"IGV (18%): {moneda} {igv:.2f}\n"
-            f"*Total: {moneda} {total:.2f}*\n\n"
-            "¿Cómo deseas pagar?",
+            f"*TOTAL:    {moneda} {total:.2f}*",
             [
-                {"id": "pagar_ahora", "titulo": "💳 Pagar Ahora"},
-                {"id": "modificar", "titulo": "✏️ Modificar"},
-            ]
+                {"id": "pagar_ahora", "title": "💳 Pagar Ahora"},
+                {"id": "modificar",   "title": "✏️ Modificar"},
+            ],
+            header="PEDIDO LISTO",
+            footer="Elige cómo pagar 👆"
         )
 
-    async def _flujo_pago(self, tel: str, msg: str, datos: dict):
+    # ── PASO 7: PAGO ──────────────────────────────────────────────────────────
+
+    async def _paso_pago(self, tel: str, msg: str, datos: dict):
         if msg == "modificar":
-            return await self._flujo_categorias(tel, msg, datos)
+            return await self._paso_categorias(tel, msg, datos)
 
-        moneda = self._cfg("moneda", "S/")
-        yape = self._cfg("yape", "N/D")
-        plin = self._cfg("plin", "N/D")
-        total = datos.get("total", 0)
+        moneda = self.cfg("moneda", "S/")
+        yape   = self.cfg("yape",   "No configurado")
+        plin   = self.cfg("plin",   "No configurado")
+        total  = datos.get("total", 0)
 
-        await self.enviar_botones(
+        await self.enviar_lista(
             tel,
             f"💰 Total a pagar: *{moneda} {total:.2f}*\n\n"
             f"📱 *Yape:* {yape}\n"
             f"📱 *Plin:* {plin}\n\n"
             "Elige tu método de pago:",
-            [
-                {"id": "pago_yape", "titulo": "💜 Yape"},
-                {"id": "pago_plin", "titulo": "🔵 Plin"},
-                {"id": "pago_efectivo", "titulo": "💵 Efectivo"},
-            ]
+            "Ver Métodos",
+            [{
+                "title": "Métodos de Pago",
+                "rows": [
+                    {"id": "pago_yape",     "title": "💜 Yape",               "description": f"Enviar a {yape}"[:72]},
+                    {"id": "pago_plin",     "title": "🔵 Plin",               "description": f"Enviar a {plin}"[:72]},
+                    {"id": "pago_tarjeta",  "title": "💳 Tarjeta Visa/MC",    "description": "Visa o Mastercard"},
+                    {"id": "pago_efectivo", "title": "💵 Efectivo",           "description": "Contra entrega"},
+                ]
+            }],
+            footer="Selecciona tu método 👆"
         )
         return "pedido_enviado", datos
 
-    async def _flujo_post_pago(self, tel: str, msg: str, datos: dict):
-        metodo_map = {
-            "pago_yape": "yape",
-            "pago_plin": "plin",
-            "pago_efectivo": "efectivo",
-            "pago_tarjeta": "tarjeta",
-        }
-        metodo = metodo_map.get(msg, "efectivo")
+    # ── PASO 8: PAGO CONFIRMADO → COCINA ─────────────────────────────────────
+
+    async def _paso_post_pago(self, tel: str, msg: str, datos: dict):
+        metodo = {
+            "pago_yape":    "Yape",
+            "pago_plin":    "Plin",
+            "pago_tarjeta": "Tarjeta",
+            "pago_efectivo":"Efectivo",
+        }.get(msg, "Efectivo")
         datos["metodo_pago"] = metodo
 
-        pedido_id = await self._registrar_pedido(tel, datos)
-        moneda = self._cfg("moneda", "S/")
-        total = datos.get("total", 0)
+        pedido_id = await self._registrar_pedido_en_bd(tel, datos)
+        moneda    = self.cfg("moneda", "S/")
+        total     = datos.get("total", 0)
 
         await self.enviar_texto(
             tel,
             f"✅ *¡Pago Confirmado!*\n\n"
-            f"🎉 Hemos recibido tu pedido #{pedido_id}\n"
+            f"🎉 Pedido *#{pedido_id}* registrado\n"
             f"💰 Total: {moneda} {total:.2f}\n"
-            f"💳 Método: {metodo.upper()}\n\n"
-            f"⏱️ Tiempo estimado: 30-40 min\n\n"
-            f"📍 ¡Tu pedido ya está en la cocina! Te avisaremos cuando esté listo. 👨‍🍳"
+            f"💳 Método: {metodo}\n\n"
+            f"⏱️ *Tiempo estimado: 35-40 min*\n\n"
+            f"👨‍🍳 Tu pedido ya está en cocina.\n"
+            f"Te avisaremos cuando esté listo. 🙏"
         )
-
+        await self.enviar_botones(
+            tel,
+            "¿Algo más?",
+            [
+                {"id": "hola",       "title": "🔄 Nuevo Pedido"},
+                {"id": "mis_pedidos","title": "📦 Ver mis Pedidos"},
+            ]
+        )
         return "inicio", {}
 
-    # ── HELPER: REGISTRAR PEDIDO EN BD ────────────────────────────────────────
+    # ── MIS PEDIDOS ───────────────────────────────────────────────────────────
 
-    async def _registrar_pedido(self, telefono: str, datos: dict) -> int:
+    async def _mostrar_mis_pedidos(self, tel: str, datos: dict):
+        cliente = self.db.query(Cliente).filter(Cliente.telefono == tel).first()
+        if not cliente:
+            await self.enviar_texto(tel, "📭 Aún no tienes pedidos registrados.\nEscribe 'menú' para hacer tu primer pedido.")
+            return "menu_categorias", datos
+
+        pedidos = self.db.query(Pedido).filter(
+            Pedido.cliente_id == cliente.id
+        ).order_by(Pedido.created_at.desc()).limit(5).all()
+
+        if not pedidos:
+            await self.enviar_texto(tel, "📭 No tienes pedidos registrados aún.")
+        else:
+            moneda = self.cfg("moneda", "S/")
+            lineas = "\n".join(
+                f"• Pedido #{p.id} — {moneda} {p.total:.2f} — {p.estado.value.upper()}"
+                for p in pedidos
+            )
+            await self.enviar_texto(tel, f"📦 *Tus últimos pedidos:*\n\n{lineas}")
+
+        return "menu_categorias", datos
+
+    # ── REGISTRAR PEDIDO EN BD ────────────────────────────────────────────────
+
+    async def _registrar_pedido_en_bd(self, telefono: str, datos: dict) -> int:
+        # Buscar o crear cliente
         cliente = self.db.query(Cliente).filter(Cliente.telefono == telefono).first()
         if not cliente:
             conv = self.db.query(ConversacionWhatsApp).filter(
                 ConversacionWhatsApp.telefono == telefono
             ).first()
             cliente = Cliente(
-                nombre=conv.nombre if conv else "Cliente WhatsApp",
-                telefono=telefono,
+                nombre   = conv.nombre if conv else "Cliente WhatsApp",
+                telefono = telefono,
             )
             self.db.add(cliente)
             self.db.flush()
 
-        from datetime import datetime as dt
-        total_count = self.db.query(Pedido).count()
-        ticket = f"WA-{dt.now().strftime('%Y%m%d')}-{total_count + 1:04d}"
+        # Generar número de ticket
+        total_pedidos = self.db.query(Pedido).count()
+        ticket = f"WA-{datetime.now().strftime('%Y%m%d')}-{total_pedidos+1:04d}"
 
         pedido = Pedido(
-            cliente_id=cliente.id,
-            canal=CanalPedido.whatsapp,
-            estado=EstadoPedido.pendiente,
-            subtotal=datos.get("subtotal", 0),
-            igv=datos.get("igv", 0),
-            total=datos.get("total", 0),
-            numero_ticket=ticket,
+            cliente_id    = cliente.id,
+            canal         = CanalPedido.whatsapp,
+            estado        = EstadoPedido.pendiente,
+            subtotal      = datos.get("subtotal", 0),
+            igv           = datos.get("igv", 0),
+            total         = datos.get("total", 0),
+            numero_ticket = ticket,
         )
         self.db.add(pedido)
         self.db.flush()
 
         for item in datos.get("carrito", []):
             self.db.add(DetallePedido(
-                pedido_id=pedido.id,
-                producto_id=item["prod_id"],
-                cantidad=item["cantidad"],
-                precio_unitario=item["precio"],
-                subtotal=item["subtotal"],
+                pedido_id      = pedido.id,
+                producto_id    = item["prod_id"],
+                cantidad       = item["cantidad"],
+                precio_unitario= item["precio"],
+                subtotal       = item["subtotal"],
             ))
 
-        cliente.total_pedidos += 1
+        cliente.total_pedidos = (cliente.total_pedidos or 0) + 1
         self.db.commit()
         return pedido.id
 
-    def _obtener_conv(self, telefono: str, nombre: str) -> ConversacionWhatsApp:
+    # ── HELPER: CONVERSACIÓN ──────────────────────────────────────────────────
+
+    def _get_or_create_conv(self, telefono: str, nombre: str) -> ConversacionWhatsApp:
         conv = self.db.query(ConversacionWhatsApp).filter(
             ConversacionWhatsApp.telefono == telefono
         ).first()
         if not conv:
-            conv = ConversacionWhatsApp(telefono=telefono, nombre=nombre)
+            conv = ConversacionWhatsApp(telefono=telefono, nombre=nombre, estado_flujo="inicio")
             self.db.add(conv)
             self.db.flush()
-        else:
-            if nombre and nombre != "Cliente":
-                conv.nombre = nombre
+        elif nombre and nombre not in ("Cliente", ""):
+            conv.nombre = nombre
         return conv
