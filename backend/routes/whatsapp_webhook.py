@@ -141,10 +141,12 @@ async def recibir_mensaje_meta(
 
 
 async def _procesar_bg(telefono: str, mensaje: str, nombre: str, db: Session):
-    """Tarea de fondo: procesa el mensaje usando el service."""
+    """Tarea de fondo: procesa el mensaje. Lee token de la BD primero, luego env vars."""
+    tk  = db.query(ConfigRestaurante).filter(ConfigRestaurante.clave == "whatsapp_token").first()
+    pid = db.query(ConfigRestaurante).filter(ConfigRestaurante.clave == "whatsapp_phone_id").first()
     svc = WhatsAppService(
-        token    = os.getenv("WA_TOKEN",    ""),
-        phone_id = os.getenv("WA_PHONE_ID", ""),
+        token    = (tk.valor  if tk  else None) or os.getenv("WA_TOKEN",    ""),
+        phone_id = (pid.valor if pid else None) or os.getenv("WA_PHONE_ID", ""),
         db       = db,
     )
     await svc.procesar_mensaje(telefono, mensaje, nombre)

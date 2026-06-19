@@ -160,11 +160,11 @@ class WhatsAppService:
     # ── ENVÍO HTTP a Meta Graph API ────────────────────────────────────────────
 
     async def _send(self, payload: dict) -> dict:
-        """Envía el payload a la API de Meta. En modo simulación solo lo imprime."""
+        """Envía el payload a la API de Meta. Sin token → imprime para depuración."""
         if not self.token or not self.phone_id:
             tipo = payload.get("type", "?")
             dest = payload.get("to", "?")
-            print(f"[WA-SIM] tipo={tipo} → {dest}")
+            print(f"[WA-SIM] tipo={tipo} → {dest} | payload={json.dumps(payload, ensure_ascii=False)[:200]}")
             return {"simulated": True, "tipo": tipo}
 
         url = f"{self.META_URL}/{self.phone_id}/messages"
@@ -177,7 +177,10 @@ class WhatsAppService:
                     "Content-Type": "application/json"
                 }
             )
-            return resp.json()
+            data = resp.json()
+            if resp.status_code != 200:
+                print(f"[WA-ERROR] {resp.status_code} → {json.dumps(data, ensure_ascii=False)}")
+            return data
 
     # ── MÉTODOS PÚBLICOS DE ENVÍO ──────────────────────────────────────────────
 
@@ -348,7 +351,7 @@ class WhatsAppService:
 
         # Comandos globales (siempre disponibles)
         if msg in ["hola", "inicio", "start", "/start", "menu", "menú", "reiniciar"]:
-            nuevo_estado, nuevos_datos = await self._paso_bienvenida(telefono, datos)
+            nuevo_estado, nuevos_datos = await self._paso_bienvenida(telefono, msg, datos)
         elif msg == "ubicacion":
             await self.enviar_ubicacion(telefono)
             nuevo_estado, nuevos_datos = conv.estado_flujo, datos
@@ -374,7 +377,9 @@ class WhatsAppService:
 
     # ── PASO 1: BIENVENIDA ────────────────────────────────────────────────────
 
-    async def _paso_bienvenida(self, tel: str, datos: dict):
+    async def _paso_bienvenida(self, tel: str, msg: str = "", datos: dict = None):
+        if datos is None:
+            datos = {}
         nombre_rest = self.cfg("nombre", "Tu Restaurante")
         await self.enviar_botones(
             tel,
@@ -400,7 +405,7 @@ class WhatsAppService:
             await self.enviar_texto(tel, "😔 El menú no está disponible en este momento. Intenta más tarde.")
             return "inicio", {}
 
-        # Construir secciones de lista desde la BD
+        # Solo categorías con productos disponibles
         rows = [
             {
                 "id":          f"cat_{cat_id}",
@@ -410,6 +415,18 @@ class WhatsAppService:
             for cat_id, info in menu.items()
             if info["productos"]
         ]
+
+        # Si no hay productos en ninguna categoría, avisamos con texto
+        if not rows:
+            nombre_rest = self.cfg("nombre", "Tu Restaurante")
+            await self.enviar_texto(
+                tel,
+                f"🍽️ *{nombre_rest}*\n\n"
+                "El menú está siendo preparado por el restaurante.\n\n"
+                "📲 Vuelve pronto o llámanos para hacer tu pedido.\n\n"
+                "Escribe *hola* para volver al inicio."
+            )
+            return "inicio", {}
 
         await self.enviar_lista(
             tel,

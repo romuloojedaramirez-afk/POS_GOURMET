@@ -590,10 +590,10 @@
      ║  OPERACIONES EN TIEMPO REAL              ║
      ╚═══════════════════════════════════════════╝ -->
 <div class="ops-hdr">
-  <h2 style="font-size:14px;font-weight:800;">💬 Operaciones en Tiempo Real</h2>
+  <h2 style="font-size:14px;font-weight:800;">💬 Conversaciones WhatsApp en Tiempo Real</h2>
   <div style="display:flex;gap:7px;">
+    <span style="font-size:11px;color:var(--text-muted);align-self:center;">El bot responde automáticamente a mensajes de WhatsApp</span>
     <button class="btn btn-ghost btn-sm" onclick="cargarConversaciones()">🔄 Actualizar</button>
-    <button class="btn btn-primary btn-sm" onclick="simRapido('hola')">▶ Demo Rápido</button>
   </div>
 </div>
 
@@ -609,25 +609,12 @@
     <div class="conv-list" id="conv-list">
       <div style="padding:20px;text-align:center;color:var(--text-muted);font-size:12px;">Cargando...</div>
     </div>
-    <div class="sim-q">
-      <div class="sim-ql">🧪 Simulador WhatsApp</div>
-      <div style="display:flex;gap:4px;margin-bottom:4px;">
-        <input type="text" id="sim-tel"    value="+51999000001" style="flex:1;font-size:10px;padding:4px 7px;">
-        <input type="text" id="sim-nombre" value="Juan Pérez"   style="flex:1;font-size:10px;padding:4px 7px;">
-      </div>
-      <div style="display:flex;gap:4px;">
-        <input type="text" id="sim-msg" placeholder="Escribe mensaje..." style="flex:1;font-size:10px;padding:4px 7px;" onkeypress="if(event.key==='Enter')simular()">
-        <button class="btn btn-primary btn-sm" onclick="simular()" style="padding:4px 8px;">▶</button>
-      </div>
-      <div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:5px;">
-        <span class="atajo" onclick="simRapido('hola')">hola</span>
-        <span class="atajo" onclick="simRapido('ver_menu')">menú</span>
-        <span class="atajo" onclick="simRapido('Lomo Saltado')">lomo</span>
-        <span class="atajo" onclick="simRapido('2')">x2</span>
-        <span class="atajo" onclick="simRapido('Inca Kola')">inca kola</span>
-        <span class="atajo" onclick="simRapido('no_bebida')">sin bebida</span>
-        <span class="atajo" onclick="simRapido('pagar_ahora')">pagar</span>
-        <span class="atajo" onclick="simRapido('pago_yape')">yape</span>
+    <div class="sim-q" style="background:rgba(37,211,102,0.08);border:1px solid rgba(37,211,102,0.2);border-radius:8px;padding:10px;">
+      <div class="sim-ql" style="color:#25D366;font-weight:700;font-size:11px;margin-bottom:6px;">📲 Estado del Sistema</div>
+      <div style="font-size:10px;color:var(--text-muted);line-height:1.6;">
+        ✅ Bot activo — responde automáticamente<br>
+        📡 Webhook: <code style="font-size:9px;">POST /api/whatsapp/webhook</code><br>
+        💬 Los clientes escriben a tu número de WhatsApp Business y el bot responde solo.
       </div>
     </div>
   </div>
@@ -635,10 +622,10 @@
   <!-- CHAT -->
   <div class="chat-panel">
     <div class="chat-empty" id="chat-empty">
-      <div style="font-size:50px;margin-bottom:10px;">💬</div>
-      <h3 style="color:var(--text);margin-bottom:5px;">Selecciona una conversación</h3>
-      <p style="font-size:12px;color:var(--text-muted);text-align:center;max-width:240px;">O usa el simulador para ver el bot WhatsApp en acción</p>
-      <button class="btn btn-primary" style="margin-top:12px;" onclick="simRapido('hola')">▶ Iniciar Demo</button>
+      <div style="font-size:50px;margin-bottom:10px;">📱</div>
+      <h3 style="color:var(--text);margin-bottom:5px;">Conversaciones de WhatsApp</h3>
+      <p style="font-size:12px;color:var(--text-muted);text-align:center;max-width:240px;">Selecciona una conversación de la lista para ver el detalle del pedido</p>
+      <p style="font-size:11px;color:#25D366;text-align:center;max-width:240px;margin-top:8px;">El bot responde automáticamente cuando los clientes escriben a tu WhatsApp Business</p>
     </div>
     <div id="chat-activo" style="display:none;flex-direction:column;height:100%">
       <div class="chat-hdr">
@@ -801,63 +788,94 @@ function renderPipeline(est) {
 }
 
 function renderMensajes(conv) {
-  const c=document.getElementById('wa-messages');
-  const datos=conv.datos_pedido||{}, carrito=datos.carrito||[];
-  const idx=PIPE_ORDER.indexOf(conv.estado_flujo);
-  const hr=(o=0)=>{ const d=new Date(conv.created_at); d.setMinutes(d.getMinutes()+o); return d.toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'}); };
+  const c = document.getElementById('wa-messages');
+  const datos = conv.datos_pedido || {};
+  const carrito = datos.carrito || [];
+  const est = conv.estado_flujo;
+  const idx = PIPE_ORDER.indexOf(est);
 
-  const msgs=[];
-  msgs.push({t:'bot',x:'¡Hola! 😊 Bienvenido a <b>Tu Restaurante</b><br>¿Qué deseas hacer hoy?',h:hr(0),
-    b:['🥗 Ver Almuerzos','🥤 Ver Bebidas','🍰 Ver Postres','📦 Mis Pedidos']});
-  if(idx>=1) msgs.push({t:'user',x:'Hola, quiero ver el menú',h:hr(1)});
-  if(idx>=2) msgs.push({t:'bot',x:'🥗 <b>Almuerzos</b> — Elige tu opción:',h:hr(1),
-    b:['🥩 Lomo Saltado S/20','🍚 Arroz con Pollo S/18','🍗 Pollo a la Brasa S/22','🍝 Tallarín Verde S/19']});
-  if(idx>=3) msgs.push({t:'user',x:'Lomo Saltado',h:hr(2)});
-  if(idx>=3) msgs.push({t:'bot',x:'🥩 <b>Lomo Saltado</b> — S/20.00<br><i>Delicioso lomo salteado al estilo de la casa</i><br><br>¿Cuántas unidades? (1, 2, 3 ó 4)',h:hr(2),
-    b:['1️⃣ Una','2️⃣ Dos','3️⃣ Tres','4️⃣ Cuatro']});
-  if(idx>=4) {
-    msgs.push({t:'user',x:'2 unidades',h:hr(3)});
-    msgs.push({t:'bot',x:'¿Deseas agregar complementos? 🥤',h:hr(3),
-      b:['🟡 Inca Kola S/4','🔴 Coca Cola S/4','🟣 Chicha Morada S/4','✕ No, gracias']});
-  }
-  if(carrito.length&&idx>=5) {
-    const items=carrito.map(i=>`• ${i.emoji||'🍽️'} ${i.nombre} x${i.cantidad} = S/${i.subtotal?.toFixed(2)}`).join('<br>');
-    msgs.push({t:'user',x:'Inca Kola',h:hr(4)});
-    msgs.push({t:'bot',x:`🧾 <b>Resumen de tu pedido</b><br>${items}<br><b>Total: S/ ${datos.total?.toFixed(2)||'0.00'}</b>`,h:hr(4),
-      b:['💰 Pagar Ahora','✏️ Modificar Pedido']});
-  }
-  if(idx>=6) {
-    msgs.push({t:'user',x:'Pagar ahora',h:hr(5)});
-    msgs.push({t:'bot',x:'<b>Elige tu método de pago:</b>',h:hr(5),
-      b:['💜 Yape','🔵 Plin','💳 Tarjeta Visa/Mastercard','💵 Efectivo (contra entrega)']});
-  }
-  if(idx>=7||conv.estado_flujo==='pedido_enviado') {
-    msgs.push({t:'user',x:'Yape ✅',h:hr(6)});
-    msgs.push({t:'bot',x:`✅ <b>¡Pago Confirmado! Pedido #${Math.floor(1200+Math.random()*100)}</b><br>🎉 Tu pedido ya está en cocina<br>⏱️ Tiempo estimado: <b>35-40 min</b><br>¡Gracias ${conv.nombre}! 😊`,h:hr(6)});
+  const estadoLabels = {
+    'inicio':              '👋 Esperando mensaje',
+    'menu_categorias':     '📋 Viendo categorías del menú',
+    'menu_productos':      '🍽️ Eligiendo plato',
+    'detalle_producto':    '🛒 Seleccionando cantidad',
+    'agregar_complemento': '🥤 Eligiendo bebida/complemento',
+    'confirmar_pedido':    '📝 Confirmando pedido',
+    'seleccionar_pago':    '💳 Eligiendo método de pago',
+    'pedido_enviado':      '✅ Pedido confirmado',
+  };
+
+  const estadoColor = {
+    'inicio':              '#aaa',
+    'menu_categorias':     '#4FC3F7',
+    'menu_productos':      '#FFB800',
+    'detalle_producto':    '#FF8C00',
+    'agregar_complemento': '#9C27B0',
+    'confirmar_pedido':    '#FF6B35',
+    'seleccionar_pago':    '#03A9F4',
+    'pedido_enviado':      '#25D366',
+  };
+
+  const color = estadoColor[est] || '#aaa';
+  const label = estadoLabels[est] || est;
+  const updAt = conv.updated_at ? new Date(conv.updated_at).toLocaleString('es-PE') : '—';
+
+  let carritoHtml = '';
+  if (carrito.length > 0) {
+    const moneda = 'S/';
+    const total = datos.total ? datos.total.toFixed(2) : carrito.reduce((s,i)=>s+i.subtotal,0).toFixed(2);
+    carritoHtml = `
+      <div style="background:rgba(37,211,102,0.08);border:1px solid rgba(37,211,102,0.2);border-radius:8px;padding:10px;margin:8px 0;">
+        <div style="font-weight:700;font-size:12px;margin-bottom:6px;">🛒 Carrito Actual</div>
+        ${carrito.map(i=>`
+          <div style="display:flex;justify-content:space-between;font-size:11px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.07);">
+            <span>${i.emoji||'🍽️'} ${i.nombre} × ${i.cantidad}</span>
+            <span style="font-weight:600;">${moneda} ${i.subtotal?.toFixed(2)}</span>
+          </div>`).join('')}
+        <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-top:6px;color:#25D366;">
+          <span>TOTAL</span><span>${moneda} ${total}</span>
+        </div>
+        ${datos.metodo_pago ? `<div style="font-size:10px;margin-top:4px;color:var(--text-muted);">Pago: ${datos.metodo_pago}</div>` : ''}
+      </div>`;
+  } else if (idx > 0) {
+    carritoHtml = `<div style="font-size:11px;color:var(--text-muted);padding:8px 0;">El cliente aún no ha agregado productos al carrito.</div>`;
   }
 
-  c.innerHTML = msgs.map(m=>`
-    <div class="msg ${m.t}">
-      <div class="msg-bub">${m.x}</div>
-      ${m.b?.length?`<div class="msg-btns">${m.b.map(b=>`<button class="msg-btn" onclick="document.getElementById('sim-msg').value='${b.replace(/['"<>]/g,'')}';simular()">${b}</button>`).join('')}</div>`:''}
-      <div class="msg-time">${m.t==='bot'?'🤖 ChefBot':'👤'} · ${m.h}</div>
-    </div>`).join('');
-  c.scrollTop=c.scrollHeight;
+  c.innerHTML = `
+    <div style="padding:12px;">
+      <div style="background:rgba(${color.replace('#','').match(/../g).map(h=>parseInt(h,16)).join(',')},0.12);border:1px solid ${color};border-radius:10px;padding:12px;margin-bottom:10px;">
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">ESTADO ACTUAL DE LA CONVERSACIÓN</div>
+        <div style="font-size:14px;font-weight:700;color:${color};">${label}</div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">Última actividad: ${updAt}</div>
+      </div>
+
+      ${conv.ultimo_mensaje ? `
+      <div style="margin-bottom:10px;">
+        <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px;">ÚLTIMO MENSAJE DEL CLIENTE</div>
+        <div style="background:rgba(255,255,255,0.06);border-radius:8px;padding:8px 10px;font-size:12px;">
+          💬 "${conv.ultimo_mensaje}"
+        </div>
+      </div>` : ''}
+
+      ${carritoHtml}
+
+      <div style="margin-top:8px;">
+        <div style="font-size:10px;color:var(--text-muted);margin-bottom:6px;">PROGRESO EN EL FLUJO</div>
+        <div style="display:flex;gap:3px;align-items:center;flex-wrap:wrap;">
+          ${PIPE_ORDER.map((p,i)=>`
+            <div style="font-size:9px;padding:2px 6px;border-radius:10px;background:${i<idx?'#25D366':i===idx?color:'rgba(255,255,255,0.08)'};color:${i<=idx?'#fff':'var(--text-muted)'};font-weight:${i===idx?'700':'400'};">
+              ${['👋','📋','🍽️','🛒','🥤','📝','💳','✅'][i]}
+            </div>`).join('<span style="color:var(--text-muted);font-size:8px;">→</span>')}
+        </div>
+      </div>
+
+      <div style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.07);">
+        <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px;">ENVIAR MENSAJE AL CLIENTE</div>
+        <div style="font-size:10px;color:rgba(37,211,102,0.7);">↓ Usa el campo de abajo para enviar un mensaje directo por WhatsApp</div>
+      </div>
+    </div>`;
 }
 
-async function simular() {
-  const tel=document.getElementById('sim-tel').value.trim();
-  const msg=document.getElementById('sim-msg').value.trim();
-  const nom=document.getElementById('sim-nombre').value.trim();
-  if(!tel||!msg){toast('Completa teléfono y mensaje','warning');return;}
-  try {
-    await API.post('/whatsapp/simular',{telefono:tel,mensaje:msg,nombre:nom});
-    toast(`✅ Bot respondió a: "${msg}"`, 'success');
-    document.getElementById('sim-msg').value='';
-    setTimeout(async()=>{ await cargarConversaciones(); const cv=todasConvs.find(x=>x.telefono===tel); if(cv) await abrirConv(cv.id); }, 1000);
-  } catch(e){toast(e.message,'error');}
-}
-function simRapido(m){ document.getElementById('sim-msg').value=m; simular(); }
 
 async function enviarManual() {
   const tel=convActiva?.telefono, msg=document.getElementById('manual-msg').value.trim();
