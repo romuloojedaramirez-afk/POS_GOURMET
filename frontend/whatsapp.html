@@ -3,8 +3,229 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GourmetPOS - WhatsApp Centro</title>
+  <title>GourmetPOS - WhatsApp Center</title>
   <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    /* ══════════════════════════════════════════
+       BASE LAYOUT
+    ══════════════════════════════════════════ */
+    .main-wrapper { padding:0; overflow-y:auto; }
+
+    /* HERO */
+    .wa-hero { background:linear-gradient(135deg,#075E54 0%,#128C7E 55%,#25D366 100%); padding:22px 30px 18px; text-align:center; position:relative; overflow:hidden; }
+    .wa-hero::before { content:''; position:absolute; inset:0; background:repeating-linear-gradient(45deg,rgba(255,255,255,0.03) 0,rgba(255,255,255,0.03) 1px,transparent 0,transparent 30px); }
+    .wa-hero h1 { font-size:20px; font-weight:900; color:#fff; margin-bottom:3px; position:relative; }
+    .wa-hero p  { font-size:12px; color:rgba(255,255,255,0.85); position:relative; }
+    .wa-stats-row { display:flex; justify-content:center; gap:28px; margin-top:14px; position:relative; }
+    .wa-stat-v { font-size:26px; font-weight:800; color:#fff; }
+    .wa-stat-l { font-size:10px; color:rgba(255,255,255,0.7); text-transform:uppercase; letter-spacing:0.5px; }
+
+    /* ══════════════════════════════════════════
+       SECCIÓN FLUJO — TELÉFONOS MOCKUP
+    ══════════════════════════════════════════ */
+    .flujo-sec   { background:var(--surface); padding:22px 14px; border-bottom:1px solid var(--border); }
+    .flujo-label { text-align:center; font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:16px; }
+    .flujo-row   { display:flex; align-items:flex-start; justify-content:center; gap:0; overflow-x:auto; padding-bottom:6px; }
+    .flujo-step  { display:flex; flex-direction:column; align-items:center; min-width:160px; }
+    .step-badge  { width:22px; height:22px; border-radius:50%; background:var(--accent); color:#fff; font-size:10px; font-weight:800; display:flex; align-items:center; justify-content:center; margin-bottom:5px; }
+    .step-title  { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; color:var(--text-muted); margin-bottom:7px; text-align:center; }
+    .arrow-ph    { font-size:20px; color:#25D366; padding-top:72px; flex-shrink:0; font-weight:700; }
+
+    /* Teléfono mockup */
+    .phone       { width:148px; background:#fff; border-radius:20px; border:3px solid #111; overflow:hidden; box-shadow:0 6px 20px rgba(0,0,0,0.45); flex-shrink:0; }
+    .ph-notch    { height:13px; background:#111; display:flex; align-items:center; justify-content:center; }
+    .ph-notch-dot{ width:36px; height:4px; background:#222; border-radius:3px; }
+    .ph-wabar    { background:#075E54; padding:5px 7px; display:flex; align-items:center; gap:5px; }
+    .ph-av       { width:20px; height:20px; border-radius:50%; background:#25D366; display:flex; align-items:center; justify-content:center; font-size:10px; flex-shrink:0; }
+    .ph-name     { font-size:8px; font-weight:700; color:#fff; line-height:1.1; }
+    .ph-online   { font-size:7px; color:#9DDBB7; }
+    .ph-body     { background:#ECE5DD; min-height:180px; padding:5px; display:flex; flex-direction:column; gap:4px; }
+
+    /* Burbujas */
+    .bb  { background:#fff; border-radius:0 7px 7px 7px; padding:5px 6px; font-size:7.5px; color:#111; align-self:flex-start; max-width:92%; box-shadow:0 1px 2px rgba(0,0,0,0.1); line-height:1.4; }
+    .bu  { background:#DCF8C6; border-radius:7px 0 7px 7px; padding:5px 6px; font-size:7.5px; color:#111; align-self:flex-end; max-width:80%; box-shadow:0 1px 2px rgba(0,0,0,0.1); }
+    .bt  { font-size:6px; color:#888; text-align:right; }
+
+    /* Botones verdes WhatsApp */
+    .wbtns { display:flex; flex-direction:column; gap:3px; margin-top:2px; }
+    .wbtn  { background:#fff; border:1px solid #25D366; border-radius:5px; padding:3px 5px; text-align:center; font-size:7.5px; color:#128C7E; font-weight:700; }
+
+    /* Lista productos */
+    .plist { display:flex; flex-direction:column; gap:3px; }
+    .pitem { background:#fff; border-radius:5px; padding:3px 5px; display:flex; gap:4px; align-items:center; box-shadow:0 1px 2px rgba(0,0,0,0.07); }
+    .pimg  { width:22px; height:22px; border-radius:3px; background:#f0f0f0; font-size:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .pname { font-size:7px; font-weight:700; color:#111; }
+    .pprice{ font-size:7px; color:#075E54; font-weight:600; }
+
+    /* Selección cantidad */
+    .qty-row { display:flex; gap:3px; justify-content:center; margin-top:4px; }
+    .qty-b   { width:20px; height:20px; border-radius:50%; background:#f0f0f0; display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:700; color:#111; }
+    .qty-b.on{ background:#25D366; color:#fff; }
+
+    /* Complementos con checkbox */
+    .clist { display:flex; flex-direction:column; gap:3px; }
+    .citem { background:#fff; border-radius:5px; padding:3px 5px; display:flex; align-items:center; gap:4px; }
+    .cchk  { width:12px; height:12px; border-radius:3px; border:1.5px solid #25D366; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+    .cchk.on { background:#25D366; }
+    .cchk.on::after { content:'✓'; font-size:7px; color:#fff; font-weight:800; }
+    .cname { font-size:7px; font-weight:700; color:#111; flex:1; }
+    .cpr   { font-size:7px; color:#128C7E; font-weight:600; }
+
+    /* Resumen pedido */
+    .ritem { display:flex; align-items:center; gap:4px; margin-bottom:3px; }
+    .rimg  { width:20px; height:20px; border-radius:3px; font-size:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .rname { font-size:7px; font-weight:700; color:#111; flex:1; }
+    .rprice{ font-size:7px; color:#128C7E; font-weight:700; }
+    .rtotal{ display:flex; justify-content:space-between; font-size:8px; font-weight:800; color:#111; border-top:1px solid #ddd; padding-top:3px; margin-top:2px; }
+    .btn-pagar    { background:#25D366; color:#fff; border-radius:5px; padding:4px 5px; text-align:center; font-size:7.5px; font-weight:700; margin-top:4px; }
+    .btn-modificar{ border:1px solid #bbb; border-radius:5px; padding:3px 5px; text-align:center; font-size:7px; color:#555; margin-top:2px; }
+
+    /* Métodos pago */
+    .pmlist{ display:flex; flex-direction:column; gap:3px; }
+    .pmitem{ background:#fff; border-radius:5px; padding:4px 6px; display:flex; align-items:center; gap:5px; }
+    .pmico { font-size:12px; }
+    .pmname{ font-size:7.5px; font-weight:700; color:#111; }
+
+    /* ══════════════════════════════════════════
+       FILA 2: PASOS 7-11 + ADMIN
+    ══════════════════════════════════════════ */
+    .flujo-row2 { display:flex; align-items:flex-start; gap:0; justify-content:center; overflow-x:auto; padding-bottom:8px; }
+
+    /* Pantalla cocina estilo app */
+    .cocina-app { background:#1a0000; border-radius:20px; border:3px solid #111; overflow:hidden; box-shadow:0 6px 20px rgba(0,0,0,0.45); width:148px; flex-shrink:0; }
+    .coc-header { background:#CC0000; padding:4px 6px; }
+    .coc-title  { font-size:8px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:0.5px; }
+    .coc-tabs   { display:flex; background:#111; }
+    .coc-tab    { flex:1; text-align:center; padding:3px 2px; font-size:6.5px; font-weight:700; color:rgba(255,255,255,0.5); }
+    .coc-tab.on { background:#CC0000; color:#fff; }
+    .coc-body   { background:#1a0000; padding:6px; }
+    .coc-card   { background:#111; border-radius:5px; padding:5px; margin-bottom:4px; }
+    .coc-num    { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
+    .coc-pid    { font-size:9px; font-weight:800; color:#fff; }
+    .coc-badge  { border-radius:3px; padding:1px 5px; font-size:7px; font-weight:800; }
+    .badge-new  { background:#FFB800; color:#000; }
+    .badge-prep { background:#0077CC; color:#fff; }
+    .badge-ruta { background:#25D366; color:#000; }
+    .coc-item   { font-size:7px; color:#eee; margin-bottom:2px; }
+    .coc-meta   { font-size:6.5px; color:rgba(255,255,255,0.45); margin-bottom:1px; }
+    .coc-btns   { display:flex; gap:3px; margin-top:5px; }
+    .cb-rech    { flex:1; background:#CC0000; color:#fff; border-radius:4px; padding:3px; font-size:7px; font-weight:700; text-align:center; }
+    .cb-acep    { flex:1; background:#25D366; color:#000; border-radius:4px; padding:3px; font-size:7px; font-weight:700; text-align:center; }
+    .cb-listo   { width:100%; background:#0077CC; color:#fff; border-radius:4px; padding:3px; font-size:7px; font-weight:700; text-align:center; }
+    .cb-entrega { width:100%; background:#25D366; color:#000; border-radius:4px; padding:3px; font-size:7px; font-weight:700; text-align:center; }
+
+    /* Pago confirmado */
+    .pago-box   { width:148px; border-radius:20px; border:3px solid #111; overflow:hidden; background:#fff; box-shadow:0 6px 20px rgba(0,0,0,0.45); flex-shrink:0; }
+    .pago-body  { padding:10px 8px; text-align:center; }
+    .pago-chk   { width:40px; height:40px; border-radius:50%; background:#25D366; display:flex; align-items:center; justify-content:center; font-size:20px; margin:0 auto 6px; }
+    .pago-titulo{ font-size:9px; font-weight:800; color:#111; margin-bottom:3px; }
+    .pago-sub   { font-size:7px; color:#555; margin-bottom:6px; line-height:1.3; }
+    .pago-badge { background:#f0faf5; border:1px solid #25D366; border-radius:5px; padding:5px; font-size:7px; color:#075E54; font-weight:700; margin-bottom:6px; line-height:1.4; }
+    .pago-btn   { background:#25D366; color:#fff; border-radius:5px; padding:4px 6px; font-size:7.5px; font-weight:700; }
+
+    /* Entrega box */
+    .entrega-box { width:148px; border-radius:20px; border:3px solid #111; overflow:hidden; background:#fff; box-shadow:0 6px 20px rgba(0,0,0,0.45); flex-shrink:0; }
+    .entrega-body{ padding:10px 8px; text-align:center; }
+    .stars-row  { display:flex; gap:2px; justify-content:center; margin-bottom:6px; }
+    .star       { font-size:14px; color:#FFB800; }
+
+    /* Admin panel */
+    .admin-panel { width:200px; border-radius:12px; border:2px solid var(--border); overflow:hidden; background:var(--surface); box-shadow:0 6px 20px rgba(0,0,0,0.3); flex-shrink:0; }
+    .adm-header  { background:#075E54; padding:7px 10px; display:flex; align-items:center; justify-content:space-between; }
+    .adm-title   { font-size:10px; font-weight:800; color:#fff; }
+    .adm-user    { width:20px; height:20px; border-radius:50%; background:#25D366; display:flex; align-items:center; justify-content:center; font-size:10px; }
+    .adm-body    { display:flex; }
+    .adm-sidebar { background:#1e2533; padding:6px 4px; display:flex; flex-direction:column; gap:2px; min-width:60px; }
+    .adm-nav     { font-size:7.5px; color:rgba(255,255,255,0.5); padding:3px 5px; border-radius:3px; white-space:nowrap; }
+    .adm-nav.on  { background:rgba(37,211,102,0.2); color:#25D366; }
+    .adm-main    { flex:1; padding:7px; }
+    .adm-kpis    { display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-bottom:7px; }
+    .adm-kpi     { background:var(--surface2); border-radius:4px; padding:4px; }
+    .adm-kpi-v   { font-size:9px; font-weight:800; color:var(--accent2); }
+    .adm-kpi-l   { font-size:6.5px; color:var(--text-muted); }
+    .adm-chart   { background:var(--surface2); border-radius:4px; padding:5px; margin-bottom:6px; height:32px; display:flex; align-items:flex-end; gap:2px; }
+    .adm-bar     { flex:1; background:#25D366; border-radius:2px 2px 0 0; opacity:0.7; }
+    .adm-orders  { display:flex; flex-direction:column; gap:2px; }
+    .adm-order   { display:flex; justify-content:space-between; align-items:center; font-size:7px; }
+    .adm-ord-id  { color:var(--text-muted); }
+    .adm-ord-nm  { flex:1; color:var(--text); margin:0 3px; }
+    .adm-ord-pr  { color:var(--accent2); font-weight:700; }
+
+    /* ══════════════════════════════════════════
+       FEATURES STRIP
+    ══════════════════════════════════════════ */
+    .feat-strip { display:grid; grid-template-columns:repeat(6,1fr); border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
+    .feat-item  { padding:14px 8px; text-align:center; border-right:1px solid var(--border); }
+    .feat-item:last-child { border-right:none; }
+    .feat-ico   { font-size:22px; margin-bottom:4px; }
+    .feat-name  { font-size:11px; font-weight:700; margin-bottom:2px; }
+    .feat-desc  { font-size:10px; color:var(--text-muted); line-height:1.3; }
+
+    /* ══════════════════════════════════════════
+       OPERACIONES RT
+    ══════════════════════════════════════════ */
+    .ops-hdr    { padding:13px 18px; background:var(--surface); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+    .ops-layout { display:grid; grid-template-columns:275px 1fr 295px; min-height:460px; }
+
+    .conv-panel { background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; }
+    .conv-phdr  { padding:11px 13px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+    .conv-phdr h3 { font-size:12px; font-weight:700; }
+    .wa-srch    { width:calc(100% - 26px); margin:6px 13px; background:var(--surface2); border:1px solid var(--border); border-radius:7px; padding:6px 11px; color:var(--text); font-size:12px; }
+    .conv-list  { flex:1; overflow-y:auto; }
+    .conv-item  { display:flex; align-items:center; gap:8px; padding:9px 11px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.04); transition:background 0.15s; }
+    .conv-item:hover { background:var(--surface2); }
+    .conv-item.active{ background:rgba(37,211,102,0.08); border-left:3px solid #25D366; }
+    .conv-av    { width:36px; height:36px; border-radius:50%; background:#25D366; display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:700; color:#fff; flex-shrink:0; }
+    .conv-name  { font-size:12px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .conv-msg   { font-size:10px; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .conv-bdg   { background:#25D366; color:#fff; border-radius:50%; width:15px; height:15px; font-size:8px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+
+    .sim-q      { padding:8px 11px; border-top:1px solid var(--border); }
+    .sim-ql     { font-size:9px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:5px; }
+    .atajo      { padding:3px 7px; border-radius:12px; border:1px solid var(--border); font-size:9px; cursor:pointer; color:var(--text-muted); background:var(--surface2); }
+    .atajo:hover{ border-color:#25D366; color:#25D366; }
+
+    .chat-panel { display:flex; flex-direction:column; }
+    .chat-hdr   { background:var(--surface); border-bottom:1px solid var(--border); padding:9px 13px; display:flex; align-items:center; gap:9px; flex-shrink:0; }
+    .chat-msgs  { flex:1; overflow-y:auto; padding:13px; display:flex; flex-direction:column; gap:7px; background:var(--bg); }
+    .chat-empty { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--text-muted); }
+    .chat-ibar  { background:var(--surface); border-top:1px solid var(--border); padding:8px 11px; display:flex; gap:7px; align-items:center; flex-shrink:0; }
+    .chat-inp   { flex:1; background:var(--surface2); border:1px solid var(--border); border-radius:18px; padding:7px 13px; color:var(--text); font-size:12px; }
+    .send-btn   { background:#25D366; border:none; border-radius:50%; width:34px; height:34px; color:#fff; font-size:15px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+
+    .msg        { max-width:72%; }
+    .msg.bot    { align-self:flex-start; }
+    .msg.user   { align-self:flex-end; }
+    .msg-bub    { padding:8px 11px; border-radius:10px; font-size:12px; line-height:1.5; }
+    .msg.bot  .msg-bub { background:var(--surface); border:1px solid var(--border); border-bottom-left-radius:2px; }
+    .msg.user .msg-bub { background:rgba(37,211,102,0.15); border:1px solid rgba(37,211,102,0.3); border-bottom-right-radius:2px; }
+    .msg-btns  { display:flex; gap:4px; flex-wrap:wrap; margin-top:4px; }
+    .msg-btn   { background:rgba(37,211,102,0.1); border:1px solid rgba(37,211,102,0.4); color:#25D366; border-radius:14px; padding:3px 9px; font-size:10px; font-weight:700; cursor:pointer; }
+    .msg-btn:hover { background:rgba(37,211,102,0.25); }
+    .msg-time  { font-size:9px; color:var(--text-muted); margin-top:2px; padding:0 2px; }
+    .msg.user .msg-time { text-align:right; }
+
+    .info-panel { background:var(--surface); border-left:1px solid var(--border); overflow-y:auto; }
+    .info-sec   { padding:11px 13px; border-bottom:1px solid var(--border); }
+    .info-title { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted); margin-bottom:9px; }
+
+    .pipe-steps { display:flex; flex-direction:column; gap:4px; }
+    .pipe-step  { display:flex; align-items:center; gap:7px; padding:6px 8px; border-radius:6px; background:var(--surface2); border:1px solid var(--border); font-size:11px; transition:all 0.3s; }
+    .pipe-step.done   { border-color:#25D366; background:rgba(37,211,102,0.08); }
+    .pipe-step.active { border-color:var(--accent); background:rgba(255,107,53,0.1); animation:pb 1.5s infinite; }
+    .pipe-step.pending{ opacity:0.35; }
+    @keyframes pb { 0%,100%{border-color:var(--accent)}50%{border-color:transparent} }
+    .pipe-lbl   { flex:1; font-weight:500; }
+
+    .prompt-row { display:flex; align-items:center; gap:6px; padding:5px 0; border-bottom:1px solid rgba(255,255,255,0.05); }
+    .prompt-row:last-child { border-bottom:none; }
+    .p-n  { font-size:9px; font-weight:700; color:var(--accent); min-width:12px; }
+    .p-nm { font-size:11px; font-weight:600; }
+    .p-ds { font-size:9px; color:var(--text-muted); }
+
+    .online-dot { width:7px; height:7px; border-radius:50%; background:#25D366; display:inline-block; animation:pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.4} }
+  </style>
 </head>
 <body>
 <nav class="sidebar">
@@ -19,221 +240,651 @@
     <li><a href="admin.html"><span class="icon">⚙️</span> Configuración</a></li>
   </ul>
 </nav>
+
 <div class="main-wrapper">
-  <header class="header">
-    <div class="header-title">💬 Centro de Atención WhatsApp</div>
-    <div class="header-right">
-      <div class="header-badge"><div class="badge-dot"></div><span>Bot Activo</span></div>
-      <button class="btn btn-ghost btn-sm" onclick="cargarConversaciones()">🔄 Actualizar</button>
-    </div>
-  </header>
-  <div class="content">
 
-    <!-- Prueba rápida -->
-    <div class="card" style="margin-bottom:20px">
-      <div class="card-title">🧪 Simular Mensaje WhatsApp (Pruebas)</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 2fr auto;gap:10px;align-items:end">
-        <div class="form-group" style="margin:0">
-          <label>Teléfono</label>
-          <input type="text" id="sim-tel" placeholder="+51999000000" value="+51999000001">
-        </div>
-        <div class="form-group" style="margin:0">
-          <label>Nombre</label>
-          <input type="text" id="sim-nombre" placeholder="Juan" value="Juan Pérez">
-        </div>
-        <div class="form-group" style="margin:0">
-          <label>Mensaje</label>
-          <input type="text" id="sim-msg" placeholder="hola" value="hola">
-        </div>
-        <button class="btn btn-primary" onclick="simularMensaje()">📤 Enviar</button>
-      </div>
-      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
-        <span style="font-size:12px;color:var(--text-muted)">Atajos:</span>
-        <button class="btn btn-ghost btn-sm" onclick="simRapido('hola')">hola</button>
-        <button class="btn btn-ghost btn-sm" onclick="simRapido('ver_menu')">ver_menu</button>
-        <button class="btn btn-ghost btn-sm" onclick="simRapido('no_bebida')">no_bebida</button>
-        <button class="btn btn-ghost btn-sm" onclick="simRapido('pagar_ahora')">pagar_ahora</button>
-        <button class="btn btn-ghost btn-sm" onclick="simRapido('pago_yape')">pago_yape</button>
-      </div>
-    </div>
-
-    <div class="grid-2">
-      <!-- Conversaciones activas -->
-      <div class="card">
-        <div class="card-title">💬 Conversaciones Activas</div>
-        <div id="lista-conversaciones">
-          <div class="loading"><div class="spinner"></div></div>
-        </div>
-      </div>
-
-      <!-- Estadísticas WA -->
-      <div class="card">
-        <div class="card-title">📊 Estadísticas WhatsApp</div>
-        <div class="kpi-grid" style="grid-template-columns:1fr 1fr;margin-bottom:0">
-          <div class="kpi-card green" style="padding:14px">
-            <div class="kpi-icon" style="font-size:20px">💬</div>
-            <div class="kpi-value" style="font-size:22px" id="wa-conv-total">—</div>
-            <div class="kpi-label">Conversaciones</div>
-          </div>
-          <div class="kpi-card orange" style="padding:14px">
-            <div class="kpi-icon" style="font-size:20px">📦</div>
-            <div class="kpi-value" style="font-size:22px" id="wa-pedidos">—</div>
-            <div class="kpi-label">Pedidos WA Hoy</div>
-          </div>
-        </div>
-
-        <div style="margin-top:20px">
-          <div class="card-title">🤖 Los 10 Prompts IA Activos</div>
-          <div id="lista-prompts"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Envío manual -->
-    <div class="card" style="margin-top:20px">
-      <div class="card-title">📤 Enviar Mensaje Manual</div>
-      <div style="display:grid;grid-template-columns:1fr 2fr auto;gap:10px;align-items:end">
-        <div class="form-group" style="margin:0">
-          <label>Teléfono Destino</label>
-          <input type="text" id="env-tel" placeholder="+51999000000">
-        </div>
-        <div class="form-group" style="margin:0">
-          <label>Mensaje</label>
-          <input type="text" id="env-msg" placeholder="Escribe tu mensaje aquí...">
-        </div>
-        <button class="btn btn-success" onclick="enviarManual()">📤 Enviar</button>
-      </div>
-    </div>
-
+<!-- ╔═══════════════════════════════════╗
+     ║   HERO BANNER                   ║
+     ╚═══════════════════════════════════╝ -->
+<div class="wa-hero">
+  <div style="font-size:13px;color:rgba(255,255,255,0.65);margin-bottom:1px;position:relative;">💬 CANAL WHATSAPP — DELIVERY INDEPENDIENTE DEL POS</div>
+  <h1>SISTEMA VISUAL – PEDIDOS POR WHATSAPP SIN ESCRIBIR</h1>
+  <p>El cliente solo toca la pantalla y el sistema toma el pedido automáticamente</p>
+  <div class="wa-stats-row">
+    <div><div class="wa-stat-v" id="h-convs">0</div><div class="wa-stat-l">Conversaciones</div></div>
+    <div><div class="wa-stat-v" id="h-peds">0</div><div class="wa-stat-l">Pedidos WA Hoy</div></div>
+    <div><div class="wa-stat-v" id="h-ventas">S/0</div><div class="wa-stat-l">Ventas WA Hoy</div></div>
+    <div><div class="wa-stat-v">10</div><div class="wa-stat-l">Prompts IA</div></div>
+    <div><div class="wa-stat-v">24/7</div><div class="wa-stat-l">Bot Activo</div></div>
   </div>
 </div>
 
+<!-- ╔═══════════════════════════════════════════╗
+     ║  FILA 1: PASOS 1-6 (CLIENTE)            ║
+     ╚═══════════════════════════════════════════╝ -->
+<div class="flujo-sec">
+  <div class="flujo-label">📱 Flujo del Cliente — Solo Toca, No Escribe</div>
+  <div class="flujo-row">
+
+    <!-- 1. MENÚ PRINCIPAL -->
+    <div class="flujo-step">
+      <div class="step-badge">1</div>
+      <div class="step-title">Menú Principal</div>
+      <div class="phone">
+        <div class="ph-notch"><div class="ph-notch-dot"></div></div>
+        <div class="ph-wabar"><div class="ph-av">🍽️</div><div><div class="ph-name">Tu Restaurante</div><div class="ph-online">en línea</div></div></div>
+        <div class="ph-body">
+          <div class="bu">Hola <span class="bt">11:30 ✓✓</span></div>
+          <div class="bb">¡Hola! 😊<br>Bienvenido a<br><b>Tu Restaurante</b><br>¿Qué deseas hacer hoy? <span class="bt">11:30</span></div>
+          <div class="wbtns">
+            <div class="wbtn">🥗 Ver Almuerzos</div>
+            <div class="wbtn">🥤 Ver Bebidas</div>
+            <div class="wbtn">🍰 Ver Postres</div>
+            <div class="wbtn">📦 Mis Pedidos</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="arrow-ph">→</div>
+
+    <!-- 2. CATEGORÍAS -->
+    <div class="flujo-step">
+      <div class="step-badge">2</div>
+      <div class="step-title">Categorías (Almuerzos)</div>
+      <div class="phone">
+        <div class="ph-notch"><div class="ph-notch-dot"></div></div>
+        <div class="ph-wabar"><div class="ph-av">🍽️</div><div><div class="ph-name">Tu Restaurante</div><div class="ph-online">en línea</div></div></div>
+        <div class="ph-body">
+          <div class="bb" style="font-size:8.5px;font-weight:700;">🥗 Almuerzos<br><span style="font-weight:400;font-size:7.5px;">Elige tu opción</span></div>
+          <div class="plist">
+            <div class="pitem"><div class="pimg">🥩</div><div><div class="pname">Lomo Saltado</div><div class="pprice">S/ 20.00</div></div></div>
+            <div class="pitem"><div class="pimg">🍚</div><div><div class="pname">Arroz con Pollo</div><div class="pprice">S/ 18.00</div></div></div>
+            <div class="pitem"><div class="pimg">🍗</div><div><div class="pname">Pollo a la Brasa</div><div class="pprice">S/ 22.00</div></div></div>
+            <div class="pitem"><div class="pimg">🍝</div><div><div class="pname">Tallarín Verde con Pollo</div><div class="pprice">S/ 19.00</div></div></div>
+          </div>
+          <div class="wbtn" style="margin-top:4px;">↩ Volver al Menú</div>
+        </div>
+      </div>
+    </div>
+    <div class="arrow-ph">→</div>
+
+    <!-- 3. SELECCIONA PRODUCTO -->
+    <div class="flujo-step">
+      <div class="step-badge">3</div>
+      <div class="step-title">Selecciona Producto</div>
+      <div class="phone">
+        <div class="ph-notch"><div class="ph-notch-dot"></div></div>
+        <div class="ph-wabar"><div class="ph-av">🍽️</div><div><div class="ph-name">Tu Restaurante</div><div class="ph-online">en línea</div></div></div>
+        <div class="ph-body">
+          <div style="background:#fff;border-radius:7px;text-align:center;padding:5px 4px;margin-bottom:3px;">
+            <div style="font-size:30px;">🥩</div>
+            <div style="font-size:8.5px;font-weight:800;color:#111;">Lomo Saltado</div>
+            <div style="font-size:7.5px;color:#128C7E;font-weight:600;">S/ 20.00</div>
+            <div style="font-size:7px;color:#555;line-height:1.3;margin-top:2px;">Delicioso lomo salteado al<br>estilo de la casa.</div>
+          </div>
+          <div class="bb">Elige la cantidad</div>
+          <div class="qty-row">
+            <div class="qty-b">1</div>
+            <div class="qty-b on">2</div>
+            <div class="qty-b">3</div>
+            <div class="qty-b">4</div>
+          </div>
+          <div class="wbtn" style="margin-top:5px;">↩ Volver</div>
+        </div>
+      </div>
+    </div>
+    <div class="arrow-ph">→</div>
+
+    <!-- 4. AGREGA COMPLEMENTOS -->
+    <div class="flujo-step">
+      <div class="step-badge">4</div>
+      <div class="step-title">Agrega Complementos</div>
+      <div class="phone">
+        <div class="ph-notch"><div class="ph-notch-dot"></div></div>
+        <div class="ph-wabar"><div class="ph-av">🍽️</div><div><div class="ph-name">Tu Restaurante</div><div class="ph-online">en línea</div></div></div>
+        <div class="ph-body">
+          <div class="bb"><b>¿Deseas agregar complementos?</b></div>
+          <div class="clist">
+            <div class="citem"><div class="cchk on"></div><div style="font-size:12px;">🟡</div><div class="cname">Inca Kola</div><div class="cpr">S/4.00</div></div>
+            <div class="citem"><div class="cchk"></div><div style="font-size:12px;">🔴</div><div class="cname">Coca Cola</div><div class="cpr">S/4.00</div></div>
+            <div class="citem"><div class="cchk"></div><div style="font-size:12px;">🟣</div><div class="cname">Chicha Morada</div><div class="cpr">S/4.00</div></div>
+            <div class="citem"><div style="width:12px;height:12px;border-radius:50%;background:#CC0000;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span style="font-size:8px;color:#fff;font-weight:800;">✕</span></div><div style="flex:1;font-size:7px;color:#555;font-style:italic;padding-left:5px;">No, gracias</div></div>
+          </div>
+          <div class="wbtn" style="margin-top:4px;background:#f9f9f9;color:#555;border-color:#ddd;">↩ Volver</div>
+        </div>
+      </div>
+    </div>
+    <div class="arrow-ph">→</div>
+
+    <!-- 5. RESUMEN DEL PEDIDO -->
+    <div class="flujo-step">
+      <div class="step-badge">5</div>
+      <div class="step-title">Resumen del Pedido</div>
+      <div class="phone">
+        <div class="ph-notch"><div class="ph-notch-dot"></div></div>
+        <div class="ph-wabar"><div class="ph-av">🍽️</div><div><div class="ph-name">Tu Restaurante</div><div class="ph-online">en línea</div></div></div>
+        <div class="ph-body">
+          <div class="bb">
+            <b>Resumen de tu pedido</b>
+            <div style="background:#f5f5f5;border-radius:5px;padding:5px;margin-top:3px;">
+              <div class="ritem"><div class="rimg">🥩</div><div class="rname">2 x Lomo Saltado</div><div class="rprice">S/ 40.00</div></div>
+              <div class="ritem"><div class="rimg">🟡</div><div class="rname">1 x Inca Kola</div><div class="rprice">S/ 4.00</div></div>
+              <div class="rtotal"><span>Total</span><span>S/ 44.00</span></div>
+            </div>
+          </div>
+          <div class="btn-pagar">💰 Pagar Ahora</div>
+          <div class="btn-modificar">✏️ Modificar Pedido</div>
+          <div class="wbtn" style="margin-top:2px;background:#f9f9f9;color:#555;border-color:#ddd;font-size:7px;">↩ Volver</div>
+        </div>
+      </div>
+    </div>
+    <div class="arrow-ph">→</div>
+
+    <!-- 6. MÉTODO DE PAGO -->
+    <div class="flujo-step">
+      <div class="step-badge">6</div>
+      <div class="step-title">Método de Pago</div>
+      <div class="phone">
+        <div class="ph-notch"><div class="ph-notch-dot"></div></div>
+        <div class="ph-wabar"><div class="ph-av">🍽️</div><div><div class="ph-name">Tu Restaurante</div><div class="ph-online">en línea</div></div></div>
+        <div class="ph-body">
+          <div class="bb"><b>Elige tu método de pago</b></div>
+          <div class="pmlist">
+            <div class="pmitem"><div class="pmico">💜</div><div class="pmname">Yape</div></div>
+            <div class="pmitem"><div class="pmico">🔵</div><div class="pmname">Plin</div></div>
+            <div class="pmitem"><div class="pmico">💳</div><div class="pmname">Tarjeta Visa / Mastercard</div></div>
+            <div class="pmitem"><div class="pmico">💵</div><div class="pmname">Pago en Efectivo<br><span style="font-size:6px;color:#888;">(contra entrega)</span></div></div>
+          </div>
+          <div class="wbtn" style="margin-top:4px;background:#f9f9f9;color:#555;border-color:#ddd;font-size:7px;">Cancelar</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end flujo-row -->
+</div>
+
+<!-- ╔═══════════════════════════════════════════════╗
+     ║  FILA 2: PASOS 7-11 + ADMIN PANEL           ║
+     ╚═══════════════════════════════════════════════╝ -->
+<div class="flujo-sec" style="border-top:2px solid rgba(37,211,102,0.2);">
+  <div class="flujo-label">⚙️ Proceso Automático — Cocina, Delivery y Admin</div>
+  <div class="flujo-row2 flujo-row">
+
+    <!-- 7. PAGO CONFIRMADO -->
+    <div class="flujo-step">
+      <div class="step-badge" style="background:#25D366;">7</div>
+      <div class="step-title">Pago Confirmado</div>
+      <div class="pago-box">
+        <div class="ph-notch" style="background:#111;"><div class="ph-notch-dot"></div></div>
+        <div class="pago-body">
+          <div class="pago-chk">✅</div>
+          <div class="pago-titulo">¡Pago confirmado!<br>Pedido #1257</div>
+          <div class="pago-sub">Hemos recibido tu pago correctamente.</div>
+          <div class="pago-badge">⏱️ Tiempo estimado de entrega:<br><b>35 - 40 minutos</b></div>
+          <div class="pago-btn">📱 Ver mi pedido</div>
+        </div>
+      </div>
+    </div>
+    <div class="arrow-ph">→</div>
+
+    <!-- 8. COCINA RECIBE (NUEVOS) -->
+    <div class="flujo-step">
+      <div class="step-badge" style="background:#CC0000;">8</div>
+      <div class="step-title">Cocina Recibe el Pedido</div>
+      <div class="cocina-app">
+        <div class="coc-header"><div class="coc-title">← COCINA</div><div style="font-size:7px;color:rgba(255,255,255,0.6);">11:31:05</div></div>
+        <div class="coc-tabs">
+          <div class="coc-tab on">NUEVOS (3)</div>
+          <div class="coc-tab">EN PREP. (5)</div>
+          <div class="coc-tab">LISTOS (2)</div>
+        </div>
+        <div class="coc-body">
+          <div class="coc-card">
+            <div class="coc-num"><div class="coc-pid">Pedido #1257</div><div class="coc-badge badge-new">NUEVO</div></div>
+            <div class="coc-item">🥩 2 x Lomo Saltado</div>
+            <div class="coc-item">🟡 1 x Inca Kola</div>
+            <div class="coc-meta">Cliente: Juan Pérez</div>
+            <div class="coc-meta">Dirección: Av. Los Olivos 123</div>
+            <div class="coc-btns">
+              <div class="cb-rech">RECHAZAR</div>
+              <div class="cb-acep">ACEPTAR</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="arrow-ph">→</div>
+
+    <!-- 9. PEDIDO EN PREPARACIÓN -->
+    <div class="flujo-step">
+      <div class="step-badge" style="background:#0077CC;">9</div>
+      <div class="step-title">Pedido en Preparación</div>
+      <div class="cocina-app">
+        <div class="coc-header"><div class="coc-title">← COCINA</div><div style="font-size:7px;color:rgba(255,255,255,0.6);">11:35:20</div></div>
+        <div class="coc-tabs">
+          <div class="coc-tab">NUEVOS (2)</div>
+          <div class="coc-tab on">EN PREP. (6)</div>
+          <div class="coc-tab">LISTOS (2)</div>
+        </div>
+        <div class="coc-body">
+          <div class="coc-card">
+            <div class="coc-num"><div class="coc-pid">Pedido #1257</div><div class="coc-badge badge-prep">EN PREP.</div></div>
+            <div class="coc-item">🥩 2 x Lomo Saltado</div>
+            <div class="coc-item">🟡 1 x Inca Kola</div>
+            <div class="coc-meta">Cliente: Juan Pérez</div>
+            <div class="coc-meta">Dirección: Av. Los Olivos 123</div>
+            <div class="cb-listo" style="margin-top:5px;">LISTO</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="arrow-ph">→</div>
+
+    <!-- 10. PEDIDO LISTO / EN RUTA -->
+    <div class="flujo-step">
+      <div class="step-badge" style="background:#25D366;color:#000;">10</div>
+      <div class="step-title">Pedido Listo / En Ruta</div>
+      <div class="cocina-app" style="border-color:#111;background:#001a0a;">
+        <div class="coc-header" style="background:#075E54;"><div class="coc-title">← DELIVERY</div><div style="font-size:7px;color:rgba(255,255,255,0.6);">11:50:10</div></div>
+        <div class="coc-tabs" style="background:#063;">
+          <div class="coc-tab on" style="background:#25D366;color:#000;">EN RUTA (2)</div>
+          <div class="coc-tab" style="color:rgba(255,255,255,0.5);">ENTREGADAS (15)</div>
+        </div>
+        <div class="coc-body" style="background:#001a0a;">
+          <div class="coc-card" style="background:#063;">
+            <div class="coc-num"><div class="coc-pid">Pedido #1257</div><div class="coc-badge badge-ruta">EN RUTA</div></div>
+            <div class="coc-item">🥩 2 x Lomo Saltado</div>
+            <div class="coc-item">🟡 1 x Inca Kola</div>
+            <div class="coc-meta">Cliente: Juan Pérez</div>
+            <div class="coc-meta">Repartidor: Carlos R.</div>
+            <div class="cb-entrega" style="margin-top:5px;">MARCAR COMO ENTREGADO</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="arrow-ph">→</div>
+
+    <!-- 11. PEDIDO ENTREGADO -->
+    <div class="flujo-step">
+      <div class="step-badge" style="background:#25D366;color:#000;">11</div>
+      <div class="step-title">Pedido Entregado</div>
+      <div class="entrega-box">
+        <div class="ph-notch" style="background:#111;"><div class="ph-notch-dot"></div></div>
+        <div class="entrega-body">
+          <div class="pago-chk" style="background:#25D366;margin-bottom:5px;">✅</div>
+          <div class="pago-titulo">¡Pedido entregado!<br>Pedido #1257</div>
+          <div class="pago-sub">Gracias por tu compra 😊<br>Te esperamos pronto.</div>
+          <div class="stars-row"><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span></div>
+          <div style="font-size:7px;color:#555;margin-bottom:6px;">¿Cómo fue tu experiencia?</div>
+          <div class="pago-btn">↩ Volver al Menú</div>
+        </div>
+      </div>
+    </div>
+    <div class="arrow-ph" style="padding-top:50px;color:var(--text-muted);">|</div>
+
+    <!-- ADMIN / ERP PANEL -->
+    <div class="flujo-step" style="min-width:210px;">
+      <div class="step-badge" style="background:var(--accent4);">🖥</div>
+      <div class="step-title">Vista del Admin / Caja</div>
+      <div class="admin-panel">
+        <div class="adm-header">
+          <div class="adm-title">🍽️ POS GOURMET</div>
+          <div class="adm-user">👤</div>
+        </div>
+        <div class="adm-body">
+          <div class="adm-sidebar">
+            <div class="adm-nav on">📊 Dashboard</div>
+            <div class="adm-nav">💰 Ventas</div>
+            <div class="adm-nav">📋 Pedidos</div>
+            <div class="adm-nav">🍽️ Menú</div>
+            <div class="adm-nav">📦 Productos</div>
+            <div class="adm-nav">🗄️ Inventario</div>
+            <div class="adm-nav">👥 Clientes</div>
+            <div class="adm-nav">📈 Reportes</div>
+            <div class="adm-nav">⚙️ Config.</div>
+            <div class="adm-nav" style="color:rgba(255,80,80,0.7);margin-top:auto;">🚪 Cerrar Sesión</div>
+          </div>
+          <div class="adm-main">
+            <div class="adm-kpis">
+              <div class="adm-kpi"><div class="adm-kpi-v">S/1,280</div><div class="adm-kpi-l">Ventas Hoy</div></div>
+              <div class="adm-kpi"><div class="adm-kpi-v" style="color:var(--accent)">24</div><div class="adm-kpi-l">Pedidos Hoy</div></div>
+              <div class="adm-kpi"><div class="adm-kpi-v" style="color:var(--accent3)">6</div><div class="adm-kpi-l">En Preparación</div></div>
+              <div class="adm-kpi"><div class="adm-kpi-v" style="color:#25D366">15</div><div class="adm-kpi-l">Entregados Hoy</div></div>
+            </div>
+            <div style="font-size:8px;font-weight:700;color:var(--text-muted);margin-bottom:3px;">Ventas por hora</div>
+            <div class="adm-chart">
+              <div class="adm-bar" style="height:40%;"></div><div class="adm-bar" style="height:55%;"></div>
+              <div class="adm-bar" style="height:70%;"></div><div class="adm-bar" style="height:45%;"></div>
+              <div class="adm-bar" style="height:85%;"></div><div class="adm-bar" style="height:60%;"></div>
+              <div class="adm-bar" style="height:95%;opacity:1;"></div><div class="adm-bar" style="height:75%;"></div>
+            </div>
+            <div style="font-size:8px;font-weight:700;color:var(--text-muted);margin-bottom:4px;">Últimos Pedidos</div>
+            <div class="adm-orders">
+              <div class="adm-order"><span class="adm-ord-id">#1257</span><span class="adm-ord-nm">Juan Pérez</span><span class="adm-ord-pr">S/44</span><span class="badge badge-ocupada" style="font-size:7px;padding:1px 4px;">EN RUTA</span></div>
+              <div class="adm-order"><span class="adm-ord-id">#1256</span><span class="adm-ord-nm">María López</span><span class="adm-ord-pr">S/38</span><span class="badge badge-pendiente" style="font-size:7px;padding:1px 4px;">PREP.</span></div>
+              <div class="adm-order"><span class="adm-ord-id">#1255</span><span class="adm-ord-nm">Pedro Ruiz</span><span class="adm-ord-pr">S/30</span><span class="badge badge-listo" style="font-size:7px;padding:1px 4px;">LISTO</span></div>
+              <div class="adm-order"><span class="adm-ord-id">#1254</span><span class="adm-ord-nm">Ana Torres</span><span class="adm-ord-pr">S/55</span><span class="badge" style="font-size:7px;padding:1px 4px;background:rgba(37,211,102,0.15);color:#25D366;">ENTREGADO</span></div>
+            </div>
+            <div style="text-align:right;font-size:7.5px;color:var(--accent2);margin-top:5px;cursor:pointer;">Ver todos →</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end flujo-row2 -->
+</div>
+
+<!-- ╔═══════════════════════════════════╗
+     ║   FEATURES STRIP                ║
+     ╚═══════════════════════════════════╝ -->
+<div class="feat-strip">
+  <div class="feat-item"><div class="feat-ico">👆</div><div class="feat-name">SIN ESCRIBIR</div><div class="feat-desc">El cliente solo toca la pantalla</div></div>
+  <div class="feat-item"><div class="feat-ico">⚡</div><div class="feat-name">RÁPIDO</div><div class="feat-desc">Pedidos en segundos</div></div>
+  <div class="feat-item"><div class="feat-ico">🤖</div><div class="feat-name">AUTOMÁTICO</div><div class="feat-desc">La cocina recibe al instante</div></div>
+  <div class="feat-item"><div class="feat-ico">🔒</div><div class="feat-name">SEGURO</div><div class="feat-desc">Pagos protegidos</div></div>
+  <div class="feat-item"><div class="feat-ico">📈</div><div class="feat-name">EFICIENTE</div><div class="feat-desc">Más ventas y clientes satisfechos</div></div>
+  <div class="feat-item"><div class="feat-ico">🔗</div><div class="feat-name">INTEGRADO</div><div class="feat-desc">POS, Inventario, Cocina, Delivery y Reportes</div></div>
+</div>
+
+<!-- ╔═══════════════════════════════════════════╗
+     ║  OPERACIONES EN TIEMPO REAL              ║
+     ╚═══════════════════════════════════════════╝ -->
+<div class="ops-hdr">
+  <h2 style="font-size:14px;font-weight:800;">💬 Operaciones en Tiempo Real</h2>
+  <div style="display:flex;gap:7px;">
+    <button class="btn btn-ghost btn-sm" onclick="cargarConversaciones()">🔄 Actualizar</button>
+    <button class="btn btn-primary btn-sm" onclick="simRapido('hola')">▶ Demo Rápido</button>
+  </div>
+</div>
+
+<div class="ops-layout">
+
+  <!-- CONVERSACIONES -->
+  <div class="conv-panel">
+    <div class="conv-phdr">
+      <h3>💬 Conversaciones <span class="badge badge-listo" id="conv-count" style="font-size:9px;">0</span></h3>
+      <button class="btn btn-ghost btn-sm" onclick="cargarConversaciones()" style="padding:3px 6px;font-size:11px;">↻</button>
+    </div>
+    <input class="wa-srch" placeholder="🔍 Buscar cliente..." oninput="filtrarConvs(this.value)">
+    <div class="conv-list" id="conv-list">
+      <div style="padding:20px;text-align:center;color:var(--text-muted);font-size:12px;">Cargando...</div>
+    </div>
+    <div class="sim-q">
+      <div class="sim-ql">🧪 Simulador WhatsApp</div>
+      <div style="display:flex;gap:4px;margin-bottom:4px;">
+        <input type="text" id="sim-tel"    value="+51999000001" style="flex:1;font-size:10px;padding:4px 7px;">
+        <input type="text" id="sim-nombre" value="Juan Pérez"   style="flex:1;font-size:10px;padding:4px 7px;">
+      </div>
+      <div style="display:flex;gap:4px;">
+        <input type="text" id="sim-msg" placeholder="Escribe mensaje..." style="flex:1;font-size:10px;padding:4px 7px;" onkeypress="if(event.key==='Enter')simular()">
+        <button class="btn btn-primary btn-sm" onclick="simular()" style="padding:4px 8px;">▶</button>
+      </div>
+      <div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:5px;">
+        <span class="atajo" onclick="simRapido('hola')">hola</span>
+        <span class="atajo" onclick="simRapido('ver_menu')">menú</span>
+        <span class="atajo" onclick="simRapido('Lomo Saltado')">lomo</span>
+        <span class="atajo" onclick="simRapido('2')">x2</span>
+        <span class="atajo" onclick="simRapido('Inca Kola')">inca kola</span>
+        <span class="atajo" onclick="simRapido('no_bebida')">sin bebida</span>
+        <span class="atajo" onclick="simRapido('pagar_ahora')">pagar</span>
+        <span class="atajo" onclick="simRapido('pago_yape')">yape</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHAT -->
+  <div class="chat-panel">
+    <div class="chat-empty" id="chat-empty">
+      <div style="font-size:50px;margin-bottom:10px;">💬</div>
+      <h3 style="color:var(--text);margin-bottom:5px;">Selecciona una conversación</h3>
+      <p style="font-size:12px;color:var(--text-muted);text-align:center;max-width:240px;">O usa el simulador para ver el bot WhatsApp en acción</p>
+      <button class="btn btn-primary" style="margin-top:12px;" onclick="simRapido('hola')">▶ Iniciar Demo</button>
+    </div>
+    <div id="chat-activo" style="display:none;flex-direction:column;height:100%">
+      <div class="chat-hdr">
+        <div class="conv-av" id="chat-av" style="width:34px;height:34px;font-size:14px;border-radius:50%;background:#25D366;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;">?</div>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:700;" id="chat-nombre">—</div>
+          <div style="font-size:10px;color:#25D366;"><span class="online-dot"></span> <span id="chat-status">activo</span></div>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="resetConvActiva()">🔄 Reset</button>
+      </div>
+      <div class="chat-msgs" id="wa-messages"></div>
+      <div class="chat-ibar">
+        <span style="font-size:17px;">😊</span>
+        <input class="chat-inp" type="text" id="manual-msg" placeholder="Escribe mensaje manual..." onkeypress="if(event.key==='Enter')enviarManual()">
+        <button class="send-btn" onclick="enviarManual()">➤</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANEL DERECHO -->
+  <div class="info-panel">
+    <div class="info-sec">
+      <div class="info-title">👤 Cliente Activo</div>
+      <div id="cliente-info"><div style="font-size:11px;color:var(--text-muted);">Selecciona una conversación</div></div>
+    </div>
+    <div class="info-sec">
+      <div class="info-title">🔄 Pipeline Johnson — 8 Etapas</div>
+      <div class="pipe-steps">
+        <div class="pipe-step pending" data-step="inicio">              <span>👋</span><span class="pipe-lbl">Bienvenida</span><span></span></div>
+        <div class="pipe-step pending" data-step="menu_categorias">    <span>📋</span><span class="pipe-lbl">Ver Menú</span><span></span></div>
+        <div class="pipe-step pending" data-step="menu_productos">     <span>🍽️</span><span class="pipe-lbl">Elige Categoría</span><span></span></div>
+        <div class="pipe-step pending" data-step="detalle_producto">   <span>🛒</span><span class="pipe-lbl">Selecciona Plato</span><span></span></div>
+        <div class="pipe-step pending" data-step="agregar_complemento"><span>🥤</span><span class="pipe-lbl">Complementos</span><span></span></div>
+        <div class="pipe-step pending" data-step="confirmar_pedido">   <span>📝</span><span class="pipe-lbl">Confirmar Orden</span><span></span></div>
+        <div class="pipe-step pending" data-step="seleccionar_pago">   <span>💳</span><span class="pipe-lbl">Elegir Pago</span><span></span></div>
+        <div class="pipe-step pending" data-step="pedido_enviado">     <span>✅</span><span class="pipe-lbl">Pedido Confirmado</span><span></span></div>
+      </div>
+    </div>
+    <div class="info-sec">
+      <div class="info-title">🤖 10 Prompts IA — Google Gemini</div>
+      <div id="prompts-list"></div>
+    </div>
+  </div>
+
+</div><!-- end ops-layout -->
+</div><!-- end main-wrapper -->
+
 <script src="assets/js/api.js"></script>
 <script>
-const PROMPTS_IA = [
-  { id: 1, nombre: "Bienvenida Inteligente", emoji: "👋", desc: "Saludo personalizado según historial del cliente" },
-  { id: 2, nombre: "Clasificador de Intención", emoji: "🧠", desc: "Detecta qué quiere el cliente automáticamente" },
-  { id: 3, nombre: "Recomendador Personal", emoji: "⭐", desc: "Sugiere platos según preferencias y pedidos anteriores" },
-  { id: 4, nombre: "Descriptor de Platos", emoji: "📝", desc: "Describe ingredientes y preparación de cada plato" },
-  { id: 5, nombre: "Gestor de Alergias", emoji: "🚨", desc: "Detecta y maneja restricciones alimentarias" },
-  { id: 6, nombre: "Negociador de Órdenes", emoji: "🛒", desc: "Ayuda a completar y modificar el pedido" },
-  { id: 7, nombre: "Procesador de Pagos", emoji: "💳", desc: "Guía el proceso de pago digital paso a paso" },
-  { id: 8, nombre: "Rastreador de Pedido", emoji: "📍", desc: "Informa el estado del pedido en tiempo real" },
-  { id: 9, nombre: "Manejador de Quejas", emoji: "🎯", desc: "Resuelve problemas con empatía y profesionalismo" },
-  { id: 10, nombre: "Promotor de Fidelización", emoji: "🎁", desc: "Upselling inteligente y programa de puntos" },
+const PROMPTS = [
+  {n:1,e:"👋",nm:"Bienvenida Inteligente",   ds:"Saludo personalizado por historial"},
+  {n:2,e:"🧠",nm:"Clasificador de Intención",ds:"Detecta qué quiere el cliente"},
+  {n:3,e:"⭐",nm:"Recomendador Personal",    ds:"Sugiere platos según preferencias"},
+  {n:4,e:"📝",nm:"Descriptor de Platos",     ds:"Describe ingredientes irresistiblemente"},
+  {n:5,e:"🚨",nm:"Gestor de Alergias",       ds:"Maneja restricciones alimentarias"},
+  {n:6,e:"🛒",nm:"Confirmador de Orden",     ds:"Resume pedido con upselling sutil"},
+  {n:7,e:"💳",nm:"Guía de Pagos",            ds:"Yape, Plin y efectivo paso a paso"},
+  {n:8,e:"📍",nm:"Rastreador de Pedido",     ds:"Estado en tiempo real"},
+  {n:9,e:"🎯",nm:"Manejador de Quejas",      ds:"Convierte problemas en fidelización"},
+  {n:10,e:"🎁",nm:"Promotor Fidelización",   ds:"Upselling + programa de puntos"},
 ];
+const PIPE_ORDER = ["inicio","menu_categorias","menu_productos","detalle_producto","agregar_complemento","confirmar_pedido","seleccionar_pago","pedido_enviado"];
+
+let convActiva = null, todasConvs = [];
 
 function renderPrompts() {
-  document.getElementById('lista-prompts').innerHTML = PROMPTS_IA.map(p => `
-    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
-      <div style="font-size:18px;width:28px;text-align:center">${p.emoji}</div>
-      <div style="flex:1">
-        <div style="font-size:13px;font-weight:600">${p.id}. ${p.nombre}</div>
-        <div style="font-size:11px;color:var(--text-muted)">${p.desc}</div>
-      </div>
-      <div class="badge badge-listo">Activo</div>
-    </div>
-  `).join('');
+  document.getElementById('prompts-list').innerHTML = PROMPTS.map(p=>`
+    <div class="prompt-row">
+      <div class="p-n">${p.n}</div>
+      <div style="font-size:13px;">${p.e}</div>
+      <div style="flex:1;"><div class="p-nm">${p.nm}</div><div class="p-ds">${p.ds}</div></div>
+      <span class="badge badge-listo" style="font-size:8px;">ON</span>
+    </div>`).join('');
 }
 
 async function cargarConversaciones() {
   try {
     const convs = await API.get('/whatsapp/conversaciones');
-    document.getElementById('wa-conv-total').textContent = convs.length;
-
-    const lista = document.getElementById('lista-conversaciones');
-    if (!convs.length) {
-      lista.innerHTML = '<div class="empty-state"><div class="icon">💬</div><p>Sin conversaciones activas</p></div>';
-      return;
-    }
-
-    const estadoColors = {
-      inicio: 'badge-libre',
-      menu_categorias: 'badge-pendiente',
-      menu_productos: 'badge-preparacion',
-      detalle_producto: 'badge-ocupada',
-      confirmar_pedido: 'badge-cuenta',
-      seleccionar_pago: 'badge-cuenta',
-      pedido_enviado: 'badge-listo',
-    };
-
-    lista.innerHTML = convs.map(c => `
-      <div style="padding:12px;border-bottom:1px solid var(--border);cursor:pointer" onclick="resetConv(${c.id})">
-        <div style="display:flex;justify-content:space-between;align-items:start">
-          <div>
-            <div style="font-weight:600">👤 ${c.nombre}</div>
-            <div style="font-size:12px;color:var(--text-muted)">${c.telefono}</div>
-          </div>
-          <span class="badge ${estadoColors[c.estado_flujo] || 'badge-pendiente'}" style="font-size:10px">${c.estado_flujo}</span>
-        </div>
-        <div style="font-size:12px;color:var(--text-muted);margin-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-          💬 ${c.ultimo_mensaje || '—'}
-        </div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">${fmtFecha(c.updated_at)}</div>
-      </div>
-    `).join('');
-  } catch (e) {
-    toast(e.message, 'error');
-  }
-}
-
-async function cargarPedidosWA() {
+    todasConvs = convs;
+    renderConvList(convs);
+    document.getElementById('conv-count').textContent = convs.length;
+    document.getElementById('h-convs').textContent   = convs.length;
+  } catch {}
   try {
-    const pedidos = await API.get('/pedidos?canal=whatsapp');
-    const hoy = new Date().toDateString();
-    const hoyCount = pedidos.filter(p => new Date(p.created_at).toDateString() === hoy).length;
-    document.getElementById('wa-pedidos').textContent = hoyCount;
+    const peds = await API.get('/pedidos');
+    const hoy  = new Date().toDateString();
+    const hp   = peds.filter(p=>new Date(p.created_at).toDateString()===hoy);
+    document.getElementById('h-peds').textContent   = hp.length;
+    document.getElementById('h-ventas').textContent = 'S/'+hp.reduce((s,p)=>s+p.total,0).toFixed(0);
   } catch {}
 }
 
-async function simularMensaje() {
-  const tel = document.getElementById('sim-tel').value.trim();
-  const msg = document.getElementById('sim-msg').value.trim();
-  const nombre = document.getElementById('sim-nombre').value.trim();
-  if (!tel || !msg) { toast('Completa teléfono y mensaje', 'warning'); return; }
-  try {
-    await API.post('/whatsapp/simular', { telefono: tel, mensaje: msg, nombre });
-    toast('✅ Mensaje enviado al pipeline', 'success');
-    setTimeout(cargarConversaciones, 1500);
-  } catch (e) {
-    toast(e.message, 'error');
+function renderConvList(convs) {
+  const el = document.getElementById('conv-list');
+  if (!convs.length) {
+    el.innerHTML = `<div style="padding:22px;text-align:center;color:var(--text-muted);font-size:12px;">
+      <div style="font-size:36px;mb:8px;">💬</div>
+      Sin conversaciones activas<br>
+      <span style="font-size:10px;">Usa el simulador ↓</span></div>`;
+    return;
   }
+  const colors=["#25D366","#FF6B35","#7C6FFF","#FFB800","#00D4A1","#FF4D6A"];
+  const labels={inicio:"Inicio",menu_categorias:"Viendo menú",menu_productos:"Elige categoría",
+    detalle_producto:"Elige plato",agregar_complemento:"Complementos",confirmar_pedido:"Confirma pedido",
+    seleccionar_pago:"Pagando",pedido_enviado:"Pedido enviado"};
+  el.innerHTML = convs.map((c,i)=>`
+    <div class="conv-item ${convActiva?.id===c.id?'active':''}" onclick="abrirConv(${c.id})">
+      <div class="conv-av" style="background:${colors[i%colors.length]}">${c.nombre.charAt(0).toUpperCase()}</div>
+      <div style="flex:1;min-width:0;">
+        <div class="conv-name">${c.nombre}</div>
+        <div class="conv-msg">📍 ${labels[c.estado_flujo]||c.estado_flujo}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0;">
+        <div style="font-size:9px;color:var(--text-muted);">${new Date(c.updated_at).toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'})}</div>
+        ${c.estado_flujo!=='inicio'?'<div class="conv-bdg">!</div>':''}
+      </div>
+    </div>`).join('');
 }
 
-function simRapido(msg) {
-  document.getElementById('sim-msg').value = msg;
-  simularMensaje();
+function filtrarConvs(q) {
+  renderConvList(todasConvs.filter(c=>c.nombre.toLowerCase().includes(q.toLowerCase())||c.telefono.includes(q)));
 }
+
+async function abrirConv(id) {
+  try {
+    const conv = await API.get(`/whatsapp/conversaciones/${id}`);
+    convActiva = conv;
+    document.getElementById('chat-empty').style.display='none';
+    document.getElementById('chat-activo').style.display='flex';
+    document.getElementById('chat-av').textContent     = conv.nombre.charAt(0).toUpperCase();
+    document.getElementById('chat-nombre').textContent = `${conv.nombre} · ${conv.telefono}`;
+    document.getElementById('chat-status').textContent = conv.activa?'activo 🟢':'inactivo ⚫';
+    renderClienteInfo(conv);
+    renderPipeline(conv.estado_flujo);
+    renderMensajes(conv);
+    renderConvList(todasConvs);
+  } catch(e) { toast(e.message,'error'); }
+}
+
+function renderClienteInfo(conv) {
+  const datos=conv.datos_pedido||{}, carrito=datos.carrito||[];
+  document.getElementById('cliente-info').innerHTML = `
+    <div style="font-size:12px;display:flex;flex-direction:column;gap:5px;">
+      <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted)">Tel</span><span>${conv.telefono}</span></div>
+      <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted)">Etapa</span><span class="badge badge-ocupada" style="font-size:9px;">${conv.estado_flujo}</span></div>
+      ${carrito.length?`
+      <div style="background:var(--surface2);border-radius:6px;padding:8px;margin-top:3px;">
+        <div style="font-size:9px;font-weight:700;color:var(--text-muted);margin-bottom:4px;">🛒 CARRITO</div>
+        ${carrito.map(i=>`<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px;"><span>${i.emoji||'🍽️'} ${i.nombre} x${i.cantidad}</span><span style="color:var(--accent2);">S/${i.subtotal?.toFixed(2)}</span></div>`).join('')}
+        <div style="border-top:1px solid var(--border);padding-top:4px;margin-top:4px;display:flex;justify-content:space-between;font-weight:700;"><span>Total</span><span style="color:var(--accent2);">S/${datos.total?.toFixed(2)||'0.00'}</span></div>
+      </div>`:'<div style="font-size:11px;color:var(--text-muted);">Carrito vacío</div>'}
+    </div>`;
+}
+
+function renderPipeline(est) {
+  document.querySelectorAll('.pipe-step').forEach((s,i)=>{
+    s.classList.remove('done','active','pending');
+    const idx=PIPE_ORDER.indexOf(est), m=s.querySelector('span:last-child');
+    if(i<idx)       { s.classList.add('done');    m.textContent='✅'; }
+    else if(i===idx){ s.classList.add('active');  m.textContent='▶'; }
+    else            { s.classList.add('pending'); m.textContent=''; }
+  });
+}
+
+function renderMensajes(conv) {
+  const c=document.getElementById('wa-messages');
+  const datos=conv.datos_pedido||{}, carrito=datos.carrito||[];
+  const idx=PIPE_ORDER.indexOf(conv.estado_flujo);
+  const hr=(o=0)=>{ const d=new Date(conv.created_at); d.setMinutes(d.getMinutes()+o); return d.toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'}); };
+
+  const msgs=[];
+  msgs.push({t:'bot',x:'¡Hola! 😊 Bienvenido a <b>Tu Restaurante</b><br>¿Qué deseas hacer hoy?',h:hr(0),
+    b:['🥗 Ver Almuerzos','🥤 Ver Bebidas','🍰 Ver Postres','📦 Mis Pedidos']});
+  if(idx>=1) msgs.push({t:'user',x:'Hola, quiero ver el menú',h:hr(1)});
+  if(idx>=2) msgs.push({t:'bot',x:'🥗 <b>Almuerzos</b> — Elige tu opción:',h:hr(1),
+    b:['🥩 Lomo Saltado S/20','🍚 Arroz con Pollo S/18','🍗 Pollo a la Brasa S/22','🍝 Tallarín Verde S/19']});
+  if(idx>=3) msgs.push({t:'user',x:'Lomo Saltado',h:hr(2)});
+  if(idx>=3) msgs.push({t:'bot',x:'🥩 <b>Lomo Saltado</b> — S/20.00<br><i>Delicioso lomo salteado al estilo de la casa</i><br><br>¿Cuántas unidades? (1, 2, 3 ó 4)',h:hr(2),
+    b:['1️⃣ Una','2️⃣ Dos','3️⃣ Tres','4️⃣ Cuatro']});
+  if(idx>=4) {
+    msgs.push({t:'user',x:'2 unidades',h:hr(3)});
+    msgs.push({t:'bot',x:'¿Deseas agregar complementos? 🥤',h:hr(3),
+      b:['🟡 Inca Kola S/4','🔴 Coca Cola S/4','🟣 Chicha Morada S/4','✕ No, gracias']});
+  }
+  if(carrito.length&&idx>=5) {
+    const items=carrito.map(i=>`• ${i.emoji||'🍽️'} ${i.nombre} x${i.cantidad} = S/${i.subtotal?.toFixed(2)}`).join('<br>');
+    msgs.push({t:'user',x:'Inca Kola',h:hr(4)});
+    msgs.push({t:'bot',x:`🧾 <b>Resumen de tu pedido</b><br>${items}<br><b>Total: S/ ${datos.total?.toFixed(2)||'0.00'}</b>`,h:hr(4),
+      b:['💰 Pagar Ahora','✏️ Modificar Pedido']});
+  }
+  if(idx>=6) {
+    msgs.push({t:'user',x:'Pagar ahora',h:hr(5)});
+    msgs.push({t:'bot',x:'<b>Elige tu método de pago:</b>',h:hr(5),
+      b:['💜 Yape','🔵 Plin','💳 Tarjeta Visa/Mastercard','💵 Efectivo (contra entrega)']});
+  }
+  if(idx>=7||conv.estado_flujo==='pedido_enviado') {
+    msgs.push({t:'user',x:'Yape ✅',h:hr(6)});
+    msgs.push({t:'bot',x:`✅ <b>¡Pago Confirmado! Pedido #${Math.floor(1200+Math.random()*100)}</b><br>🎉 Tu pedido ya está en cocina<br>⏱️ Tiempo estimado: <b>35-40 min</b><br>¡Gracias ${conv.nombre}! 😊`,h:hr(6)});
+  }
+
+  c.innerHTML = msgs.map(m=>`
+    <div class="msg ${m.t}">
+      <div class="msg-bub">${m.x}</div>
+      ${m.b?.length?`<div class="msg-btns">${m.b.map(b=>`<button class="msg-btn" onclick="document.getElementById('sim-msg').value='${b.replace(/['"<>]/g,'')}';simular()">${b}</button>`).join('')}</div>`:''}
+      <div class="msg-time">${m.t==='bot'?'🤖 ChefBot':'👤'} · ${m.h}</div>
+    </div>`).join('');
+  c.scrollTop=c.scrollHeight;
+}
+
+async function simular() {
+  const tel=document.getElementById('sim-tel').value.trim();
+  const msg=document.getElementById('sim-msg').value.trim();
+  const nom=document.getElementById('sim-nombre').value.trim();
+  if(!tel||!msg){toast('Completa teléfono y mensaje','warning');return;}
+  try {
+    await API.post('/whatsapp/simular',{telefono:tel,mensaje:msg,nombre:nom});
+    toast(`✅ Bot respondió a: "${msg}"`, 'success');
+    document.getElementById('sim-msg').value='';
+    setTimeout(async()=>{ await cargarConversaciones(); const cv=todasConvs.find(x=>x.telefono===tel); if(cv) await abrirConv(cv.id); }, 1000);
+  } catch(e){toast(e.message,'error');}
+}
+function simRapido(m){ document.getElementById('sim-msg').value=m; simular(); }
 
 async function enviarManual() {
-  const tel = document.getElementById('env-tel').value.trim();
-  const msg = document.getElementById('env-msg').value.trim();
-  if (!tel || !msg) { toast('Completa teléfono y mensaje', 'warning'); return; }
-  try {
-    await API.post('/whatsapp/enviar', { telefono: tel, mensaje: msg });
-    toast('✅ Mensaje enviado', 'success');
-    document.getElementById('env-msg').value = '';
-  } catch (e) {
-    toast(e.message, 'error');
-  }
+  const tel=convActiva?.telefono, msg=document.getElementById('manual-msg').value.trim();
+  if(!tel||!msg){toast('Selecciona conversación y escribe mensaje','warning');return;}
+  try { await API.post('/whatsapp/enviar',{telefono:tel,mensaje:msg}); toast('✅ Enviado','success'); document.getElementById('manual-msg').value=''; }
+  catch(e){toast(e.message,'error');}
 }
 
-async function resetConv(id) {
-  if (!confirm('¿Resetear esta conversación?')) return;
+async function resetConvActiva() {
+  if(!convActiva||!confirm('¿Resetear esta conversación?')) return;
   try {
-    await API.delete(`/whatsapp/conversaciones/${id}`);
-    toast('Conversación reseteada', 'info');
-    cargarConversaciones();
-  } catch (e) {
-    toast(e.message, 'error');
-  }
+    await API.delete(`/whatsapp/conversaciones/${convActiva.id}`);
+    toast('Conversación reseteada','info');
+    convActiva=null;
+    document.getElementById('chat-empty').style.display='flex';
+    document.getElementById('chat-activo').style.display='none';
+    await cargarConversaciones();
+  } catch(e){toast(e.message,'error');}
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded',()=>{
   renderPrompts();
   cargarConversaciones();
-  cargarPedidosWA();
-  setInterval(cargarConversaciones, 15000);
+  setInterval(cargarConversaciones,15000);
 });
 </script>
 </body>
